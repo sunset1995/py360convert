@@ -6,3 +6,7 @@ This project is still WIP.
 - README (tutorial and usage)
 - upload to pypi
 - Equi-Angular Cubemap
+
+**Done**:
+- e2c (equirectangular to cubemap)
+- e2p (equirectangular to perspective)
