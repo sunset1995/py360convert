@@ -2,39 +2,54 @@ import numpy as np
 from scipy.ndimage import map_coordinates
 
 
-def xyzcube(out_wh):
+def xyzcube(face_w):
     '''
     Return the xyz cordinates of the unit cube in [F R B L U D] format.
     '''
-    out = np.zeros((out_wh, out_wh * 6, 3), np.float32)
-    rng = np.linspace(-0.5, 0.5, num=out_wh, dtype=np.float32)
+    out = np.zeros((face_w, face_w * 6, 3), np.float32)
+    rng = np.linspace(-0.5, 0.5, num=face_w, dtype=np.float32)
     grid = np.stack(np.meshgrid(rng, -rng), -1)
 
     # Front face (z = 0.5)
-    out[:, 0*out_wh:1*out_wh, [0, 1]] = grid
-    out[:, 0*out_wh:1*out_wh, 2] = 0.5
+    out[:, 0*face_w:1*face_w, [0, 1]] = grid
+    out[:, 0*face_w:1*face_w, 2] = 0.5
 
     # Right face (x = 0.5)
-    out[:, 1*out_wh:2*out_wh, [2, 1]] = grid
-    out[:, 1*out_wh:2*out_wh, 0] = 0.5
+    out[:, 1*face_w:2*face_w, [2, 1]] = grid
+    out[:, 1*face_w:2*face_w, 0] = 0.5
 
     # Back face (z = -0.5)
-    out[:, 2*out_wh:3*out_wh, [0, 1]] = grid
-    out[:, 2*out_wh:3*out_wh, 2] = -0.5
+    out[:, 2*face_w:3*face_w, [0, 1]] = grid
+    out[:, 2*face_w:3*face_w, 2] = -0.5
 
     # Left face (x = -0.5)
-    out[:, 3*out_wh:4*out_wh, [2, 1]] = grid
-    out[:, 3*out_wh:4*out_wh, 0] = -0.5
+    out[:, 3*face_w:4*face_w, [2, 1]] = grid
+    out[:, 3*face_w:4*face_w, 0] = -0.5
 
     # Up face (y = 0.5)
-    out[:, 4*out_wh:5*out_wh, [0, 2]] = grid
-    out[:, 4*out_wh:5*out_wh, 1] = 0.5
+    out[:, 4*face_w:5*face_w, [0, 2]] = grid
+    out[:, 4*face_w:5*face_w, 1] = 0.5
 
     # Down face (y = -0.5)
-    out[:, 5*out_wh:6*out_wh, [0, 2]] = grid
-    out[:, 5*out_wh:6*out_wh, 1] = -0.5
+    out[:, 5*face_w:6*face_w, [0, 2]] = grid
+    out[:, 5*face_w:6*face_w, 1] = -0.5
 
     return out
+
+
+def xyzpers(h_fov, v_fov, u, v, out_hw, in_rot):
+    out = np.ones((*out_hw, 3), np.float32)
+
+    x_max = np.tan(h_fov / 2)
+    y_max = np.tan(v_fov / 2)
+    x_rng = np.linspace(-x_max, x_max, num=out_hw[1], dtype=np.float32)
+    y_rng = np.linspace(-y_max, y_max, num=out_hw[0], dtype=np.float32)
+    out[..., :2] = np.stack(np.meshgrid(x_rng, -y_rng), -1)
+    Rx = rotation_matrix(v, [1, 0, 0])
+    Ry = rotation_matrix(u, [0, 1, 0])
+    Ri = rotation_matrix(in_rot, np.array([0, 0, 1.0]).dot(Rx).dot(Ry))
+
+    return out.dot(Rx).dot(Ry).dot(Ri)
 
 
 def xyz2uv(xyz):
@@ -114,3 +129,18 @@ def cube_dice2h(cube_dice):
             face = np.flip(face, axis=0)
         cube_h[:, i*w:(i+1)*w] = face
     return cube_h
+
+
+def rotation_matrix(rad, ax):
+    ax = np.array(ax)
+    assert len(ax.shape) == 1 and ax.shape[0] == 3
+    ax = ax / np.sqrt((ax**2).sum())
+    R = np.diag([np.cos(rad)] * 3)
+    R = R + np.outer(ax, ax) * (1.0 - np.cos(rad))
+
+    ax = ax * np.sin(rad)
+    R = R + np.array([[0, -ax[2], ax[1]],
+                      [ax[2], 0, -ax[0]],
+                      [-ax[1], ax[0], 0]])
+
+    return R

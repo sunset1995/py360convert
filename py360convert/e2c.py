@@ -3,10 +3,10 @@ import numpy as np
 from . import utils
 
 
-def e2c(e_img, out_wh=256, mode='bilinear', cube_format='horizon'):
+def e2c(e_img, face_w=256, mode='bilinear', cube_format='horizon'):
     '''
     e_img:  ndarray in shape of [H, W, *]
-    out_wh: int, the length of each face of the cubemap
+    face_w: int, the length of each face of the cubemap
     '''
     assert len(e_img.shape) == 3
     h, w = e_img.shape[:2]
@@ -17,7 +17,7 @@ def e2c(e_img, out_wh=256, mode='bilinear', cube_format='horizon'):
     else:
         raise NotImplementedError('unknown mode')
 
-    xyz = utils.xyzcube(out_wh)
+    xyz = utils.xyzcube(face_w)
     uv = utils.xyz2uv(xyz)
     coor_xy = utils.uv2coor(uv, h, w)
 
