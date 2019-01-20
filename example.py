@@ -1,7 +1,7 @@
 import time
 import numpy as np
 from PIL import Image
-from py360convert import e2c, e2p
+from py360convert import e2c, e2p, c2e
 
 img = np.array(Image.open('assert/example_input.jpg'))
 
@@ -37,3 +37,12 @@ pers = e2p(img, fov_deg=120, u_deg=-90, v_deg=30, out_hw=(512, 512), in_rot_deg=
 print('e2p: %.4f sec' % (time.time() - s_time))
 Image.fromarray(pers.astype(np.uint8))\
      .save('assert/example_results/e2p.jpg', 'JPEG', quality=80)
+
+# Test c2e
+s_time = time.time()
+equirec = c2e(cube_h, 512, 1024)
+diff = np.abs(equirec - img)
+print('c2e: %.4f sec' % (time.time() - s_time))
+print('Reconstruction L2: %.6f' % np.sqrt(np.sqrt((diff**2).mean(-1)).mean()))
+Image.fromarray(equirec.astype(np.uint8))\
+     .save('assert/example_results/c2e.jpg', 'JPEG', quality=80)

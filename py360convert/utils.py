@@ -37,6 +37,13 @@ def xyzcube(face_w):
     return out
 
 
+def equirect_uvgrid(h, w):
+    u = np.linspace(-np.pi, np.pi, num=w, dtype=np.float32)
+    v = np.linspace(np.pi, -np.pi, num=h, dtype=np.float32) / 2
+
+    return np.stack(np.meshgrid(u, v), axis=-1)
+
+
 def xyzpers(h_fov, v_fov, u, v, out_hw, in_rot):
     out = np.ones((*out_hw, 3), np.float32)
 
@@ -62,6 +69,16 @@ def xyz2uv(xyz):
     v = np.arctan2(y, c)
 
     return np.concatenate([u, v], axis=-1)
+
+
+def uv2unitxyz(uv):
+    u, v = np.split(uv, 2, axis=-1)
+    y = np.sin(v)
+    c = np.cos(v)
+    x = c * np.sin(u)
+    z = c * np.cos(u)
+
+    return np.concatenate([x, y, z], axis=-1)
 
 
 def uv2coor(uv, h, w):
