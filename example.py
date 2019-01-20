@@ -20,6 +20,12 @@ for i, j in enumerate(['F', 'R', 'B', 'L', 'U', 'D']):
          .save('assert/example_results/e2c_%s.jpg' % j, 'JPEG', quality=80)
 
 s_time = time.time()
+cube_dict = e2c(img, cube_format='dict')
+print('e2c (dict): %.4f sec' % (time.time() - s_time))
+for i, k in enumerate(['F', 'R', 'B', 'L', 'U', 'D']):
+    assert np.allclose(cube_dict[k], cube_list[i])
+
+s_time = time.time()
 cube_dice = e2c(img, cube_format='dice')
 print('e2c (dice): %.4f sec' % (time.time() - s_time))
 Image.fromarray(cube_dice.astype(np.uint8))\

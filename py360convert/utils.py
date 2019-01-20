@@ -106,6 +106,17 @@ def cube_list2h(cube_list):
     return np.concatenate(cube_list, axis=1)
 
 
+def cube_h2dict(cube_h):
+    cube_list = cube_h2list(cube_h)
+    return dict([(k, cube_list[i])
+                 for i, k in enumerate(['F', 'R', 'B', 'L', 'U', 'D'])])
+
+
+def cube_dict2h(cube_dict, face_k=['F', 'R', 'B', 'L', 'U', 'D']):
+    assert len(k) == 6
+    return cube_list2h([cube_dict[k] for k in face_k])
+
+
 def cube_h2dice(cube_h):
     assert cube_h.shape[0] * 6 == cube_h.shape[1]
     w = cube_h.shape[0]

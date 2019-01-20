@@ -30,6 +30,8 @@ def e2c(e_img, face_w=256, mode='bilinear', cube_format='horizon'):
         pass
     elif cube_format == 'list':
         cubemap = utils.cube_h2list(cubemap)
+    elif cube_format == 'dict':
+        cubemap = utils.cube_h2dict(cubemap)
     elif cube_format == 'dice':
         cubemap = utils.cube_h2dice(cubemap)
 
