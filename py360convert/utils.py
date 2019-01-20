@@ -57,8 +57,8 @@ def xyz2uv(xyz):
     xyz: ndarray in shape of [..., 3]
     '''
     x, y, z = np.split(xyz, 3, axis=-1)
-    u = np.arctan2(z, x)
-    c = np.sqrt(z**2 + x**2)
+    u = np.arctan2(x, z)
+    c = np.sqrt(x**2 + z**2)
     v = np.arctan2(y, c)
 
     return np.concatenate([u, v], axis=-1)
@@ -71,10 +71,18 @@ def uv2coor(uv, h, w):
     w: int, width of the equirectangular image
     '''
     u, v = np.split(uv, 2, axis=-1)
-    coor_x = (-(u - np.pi / 2) % (2 * np.pi) / (2 * np.pi) + 0.5) * w
-    coor_y = (-v / np.pi + 0.5) * h
+    coor_x = (u / (2 * np.pi) + 0.5) * w - 0.5
+    coor_y = (-v / np.pi + 0.5) * h - 0.5
 
     return np.concatenate([coor_x, coor_y], axis=-1)
+
+
+def coor2uv(coorxy, h, w):
+    coor_x, coor_y = np.split(coorxy, 2, axis=-1)
+    u = ((coor_x + 0.5) / w - 0.5) * 2 * np.pi
+    v = -((coor_y + 0.5) / h - 0.5) * np.pi
+
+    return np.concatenate([u, v], axis=-1)
 
 
 def sample_equirec(e_img, coor_xy, order):
