@@ -40,9 +40,9 @@ Image.fromarray(pers.astype(np.uint8))\
 
 # Test c2e
 s_time = time.time()
-equirec = c2e(cube_h, 512, 1024)
-diff = np.abs(equirec - img)
-print('c2e: %.4f sec' % (time.time() - s_time))
-print('Reconstruction L2: %.6f' % np.sqrt(np.sqrt((diff**2).mean(-1)).mean()))
-Image.fromarray(equirec.astype(np.uint8))\
-     .save('assert/example_results/c2e.jpg', 'JPEG', quality=80)
+equirec = c2e(cube_h, img.shape[0], img.shape[1])
+# diff = np.abs(equirec - img)
+# print('c2e: %.4f sec' % (time.time() - s_time))
+# print('Reconstruction L2: %.6f' % np.sqrt(np.sqrt((diff**2).mean(-1)).mean()))
+# Image.fromarray(equirec.astype(np.uint8))\
+#      .save('assert/example_results/c2e.jpg', 'JPEG', quality=80)

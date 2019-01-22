@@ -1,5 +1,4 @@
 import numpy as np
-from scipy.spatial import cKDTree
 
 from . import utils
 
@@ -16,16 +15,31 @@ def c2e(cubemap, h, w, cube_format='horizon', k=4):
     k = k if k > 1 else [1]
     face_w = cubemap.shape[0]
     channel = cubemap.shape[2]
-    cubemap = cubemap.reshape(-1, channel)
 
-    cube_xyz = utils.uv2unitxyz(utils.xyz2uv(utils.xyzcube(face_w))).reshape(-1, 3)
-    equirec_xyz = utils.uv2unitxyz(utils.equirect_uvgrid(h, w)).reshape(-1, 3)
+    uv = utils.equirect_uvgrid(h, w)
+    u, v = np.split(uv, 2, axis=-1)
 
-    tree = cKDTree(cube_xyz, balanced_tree=False)
-    dist, idx = tree.query(equirec_xyz, k=k)
-    dist = dist.sum(1, keepdims=True) - dist
-    p = (dist / dist.sum(1, keepdims=True))[..., None]
-    equirec = (cubemap[idx] * p).sum(1).reshape(h, w, channel)
-    equirec = np.clip(equirec, cubemap.min(), cubemap.max())
+    # Assign face id to each pixel
+    # 0F 1R 2B 3L 4U 5D
+    deg45 = np.pi / 4
+    nonUD = (-deg45 < v) & (v < deg45)
+    tp = np.zeros((h, w, 1), dtype=np.int32) - 1
+    tp[(-deg45 < u) & (u < deg45) & nonUD] = 0  # Front face
+    tp[(-deg45 < u) & (u < deg45) & nonUD] = 1
+    tp[~nonUD & (v > 0)] = 4
+    tp[~nonUD & (v < 0)] = 5
 
-    return equirec
+    from PIL import Image
+    color = np.array([
+        [255, 0, 0],
+        [0, 255, 0],
+        [0, 0, 255],
+        [255, 255, 0],
+        [255, 0, 255],
+        [0, 255, 255],
+        [0, 0, 0]
+    ], np.uint8)
+    cb = color[tp][:, :, 0, :]
+    print(cb.shape)
+    Image.fromarray(cb).save('assert/demo.jpg', 'JPEG', quality=80)
+
