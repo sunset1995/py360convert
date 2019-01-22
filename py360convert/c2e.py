@@ -3,19 +3,21 @@ import numpy as np
 from . import utils
 
 
-def c2e(cubemap, h, w, cube_format='horizon', k=4):
-    if cube_format == 'list':
+def c2e(cubemap, h, w, cube_format='dice'):
+    if cube_format == 'horizon':
+        pass
+    elif cube_format == 'list':
         cubemap = utils.cube_list2h(cubemap)
     elif cube_format == 'dict':
         cubemap = utils.cube_dict2h(cubemap)
     elif cube_format == 'dice':
         cubemap = utils.cube_dice2h(cubemap)
+    else:
+        raise NotImplementedError('unknown cube_format')
     assert len(cubemap.shape) == 3
     assert cubemap.shape[0] * 6 == cubemap.shape[1]
     assert w % 8 == 0
-    k = k if k > 1 else [1]
     face_w = cubemap.shape[0]
-    channel = cubemap.shape[2]
 
     uv = utils.equirect_uvgrid(h, w)
     u, v = np.split(uv, 2, axis=-1)

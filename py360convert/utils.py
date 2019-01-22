@@ -53,7 +53,7 @@ def equirect_facetype(h, w):
     # Prepare ceil mask
     mask = np.zeros((h, w // 4), np.bool)
     idx = np.linspace(-np.pi, np.pi, w // 4) / 4
-    idx = h // 2 - np.floor(np.arctan(np.cos(idx)) * h / np.pi).astype(int)
+    idx = h // 2 - np.round(np.arctan(np.cos(idx)) * h / np.pi).astype(int)
     for i, j in enumerate(idx):
         mask[:j, i] = 1
     mask = np.roll(np.concatenate([mask] * 4, 1), 3 * w // 8, 1)

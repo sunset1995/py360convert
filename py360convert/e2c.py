@@ -3,7 +3,7 @@ import numpy as np
 from . import utils
 
 
-def e2c(e_img, face_w=256, mode='bilinear', cube_format='horizon'):
+def e2c(e_img, face_w=256, mode='bilinear', cube_format='dice'):
     '''
     e_img:  ndarray in shape of [H, W, *]
     face_w: int, the length of each face of the cubemap
@@ -34,5 +34,7 @@ def e2c(e_img, face_w=256, mode='bilinear', cube_format='horizon'):
         cubemap = utils.cube_h2dict(cubemap)
     elif cube_format == 'dice':
         cubemap = utils.cube_h2dice(cubemap)
+    else:
+        raise NotImplementedError()
 
     return cubemap
