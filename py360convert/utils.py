@@ -44,6 +44,26 @@ def equirect_uvgrid(h, w):
     return np.stack(np.meshgrid(u, v), axis=-1)
 
 
+def equirect_facetype(h, w):
+    '''
+    0F 1R 2B 3L 4U 5D
+    '''
+    tp = np.roll(np.arange(4).repeat(w // 4)[None, :].repeat(h, 0), 3 * w // 8, 1)
+
+    # Prepare ceil mask
+    mask = np.zeros((h, w // 4), np.bool)
+    idx = np.linspace(-np.pi, np.pi, w // 4) / 4
+    idx = h // 2 - np.floor(np.arctan(np.cos(idx)) * h / np.pi).astype(int)
+    for i, j in enumerate(idx):
+        mask[:j, i] = 1
+    mask = np.roll(np.concatenate([mask] * 4, 1), 3 * w // 8, 1)
+
+    tp[mask] = 4
+    tp[np.flip(mask, 0)] = 5
+
+    return tp.astype(np.int32)
+
+
 def xyzpers(h_fov, v_fov, u, v, out_hw, in_rot):
     out = np.ones((*out_hw, 3), np.float32)
 
@@ -110,6 +130,47 @@ def sample_equirec(e_img, coor_xy, order):
     e_img = np.concatenate([e_img, pad_d, pad_u], 0)
     return map_coordinates(e_img, [coor_y, coor_x],
                            order=order, mode='wrap')[..., 0]
+
+
+def sample_cubefaces(cube_faces, tp, coor_y, coor_x, order):
+    cube_faces = cube_faces.copy()
+    cube_faces[1] = np.flip(cube_faces[1], 1)
+    cube_faces[2] = np.flip(cube_faces[2], 1)
+    cube_faces[4] = np.flip(cube_faces[4], 0)
+
+    # Pad up down
+    pad_ud = np.zeros((6, 2, cube_faces.shape[2]))
+    pad_ud[0, 0] = cube_faces[5, 0, :]
+    pad_ud[0, 1] = cube_faces[4, -1, :]
+    pad_ud[1, 0] = cube_faces[5, :, -1]
+    pad_ud[1, 1] = cube_faces[4, ::-1, -1]
+    pad_ud[2, 0] = cube_faces[5, -1, ::-1]
+    pad_ud[2, 1] = cube_faces[4, 0, ::-1]
+    pad_ud[3, 0] = cube_faces[5, ::-1, 0]
+    pad_ud[3, 1] = cube_faces[4, :, 0]
+    pad_ud[4, 0] = cube_faces[0, 0, :]
+    pad_ud[4, 1] = cube_faces[2, 0, ::-1]
+    pad_ud[5, 0] = cube_faces[2, -1, ::-1]
+    pad_ud[5, 1] = cube_faces[0, -1, :]
+    cube_faces = np.concatenate([cube_faces, pad_ud], 1)
+
+    # Pad left right
+    pad_lr = np.zeros((6, cube_faces.shape[1], 2))
+    pad_lr[0, :, 0] = cube_faces[1, :, 0]
+    pad_lr[0, :, 1] = cube_faces[3, :, -1]
+    pad_lr[1, :, 0] = cube_faces[2, :, 0]
+    pad_lr[1, :, 1] = cube_faces[0, :, -1]
+    pad_lr[2, :, 0] = cube_faces[3, :, 0]
+    pad_lr[2, :, 1] = cube_faces[1, :, -1]
+    pad_lr[3, :, 0] = cube_faces[0, :, 0]
+    pad_lr[3, :, 1] = cube_faces[2, :, -1]
+    pad_lr[4, 1:-1, 0] = cube_faces[1, 0, ::-1]
+    pad_lr[4, 1:-1, 1] = cube_faces[3, 0, :]
+    pad_lr[5, 1:-1, 0] = cube_faces[1, -2, :]
+    pad_lr[5, 1:-1, 1] = cube_faces[3, -2, ::-1]
+    cube_faces = np.concatenate([cube_faces, pad_lr], 2)
+
+    return map_coordinates(cube_faces, [tp, coor_y, coor_x], order=order, mode='wrap')
 
 
 def cube_h2list(cube_h):

@@ -12,34 +12,44 @@ def c2e(cubemap, h, w, cube_format='horizon', k=4):
         cubemap = utils.cube_dice2h(cubemap)
     assert len(cubemap.shape) == 3
     assert cubemap.shape[0] * 6 == cubemap.shape[1]
+    assert w % 8 == 0
     k = k if k > 1 else [1]
     face_w = cubemap.shape[0]
     channel = cubemap.shape[2]
 
     uv = utils.equirect_uvgrid(h, w)
     u, v = np.split(uv, 2, axis=-1)
+    u = u[..., 0]
+    v = v[..., 0]
+    cube_faces = np.stack(np.split(cubemap, 6, 1), 0)
 
-    # Assign face id to each pixel
-    # 0F 1R 2B 3L 4U 5D
-    deg45 = np.pi / 4
-    nonUD = (-deg45 < v) & (v < deg45)
-    tp = np.zeros((h, w, 1), dtype=np.int32) - 1
-    tp[(-deg45 < u) & (u < deg45) & nonUD] = 0  # Front face
-    tp[(-deg45 < u) & (u < deg45) & nonUD] = 1
-    tp[~nonUD & (v > 0)] = 4
-    tp[~nonUD & (v < 0)] = 5
+    # Get face id to each pixel: 0F 1R 2B 3L 4U 5D
+    tp = utils.equirect_facetype(h, w)
+    coor_x = np.zeros((h, w))
+    coor_y = np.zeros((h, w))
 
-    from PIL import Image
-    color = np.array([
-        [255, 0, 0],
-        [0, 255, 0],
-        [0, 0, 255],
-        [255, 255, 0],
-        [255, 0, 255],
-        [0, 255, 255],
-        [0, 0, 0]
-    ], np.uint8)
-    cb = color[tp][:, :, 0, :]
-    print(cb.shape)
-    Image.fromarray(cb).save('assert/demo.jpg', 'JPEG', quality=80)
+    for i in range(4):
+        mask = (tp == i)
+        coor_x[mask] = 0.5 * np.tan(u[mask] - np.pi * i / 2)
+        coor_y[mask] = -0.5 * np.tan(v[mask]) / np.cos(u[mask] - np.pi * i / 2)
 
+    mask = (tp == 4)
+    c = 0.5 * np.tan(np.pi / 2 - v[mask])
+    coor_x[mask] = c * np.sin(u[mask])
+    coor_y[mask] = c * np.cos(u[mask])
+
+    mask = (tp == 5)
+    c = 0.5 * np.tan(np.pi / 2 - np.abs(v[mask]))
+    coor_x[mask] = c * np.sin(u[mask])
+    coor_y[mask] = -c * np.cos(u[mask])
+
+    # Final renormalize
+    coor_x = (np.clip(coor_x, -0.5, 0.5) + 0.5) * face_w
+    coor_y = (np.clip(coor_y, -0.5, 0.5) + 0.5) * face_w
+
+    equirec = np.stack([
+        utils.sample_cubefaces(cube_faces[..., i], tp, coor_y, coor_x, order=1)
+        for i in range(cube_faces.shape[3])
+    ], axis=-1)
+
+    return equirec
