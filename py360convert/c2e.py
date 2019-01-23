@@ -3,7 +3,14 @@ import numpy as np
 from . import utils
 
 
-def c2e(cubemap, h, w, cube_format='dice'):
+def c2e(cubemap, h, w, mode='bilinear', cube_format='dice'):
+    if mode == 'bilinear':
+        order = 1
+    elif mode == 'nearest':
+        order = 0
+    else:
+        raise NotImplementedError('unknown mode')
+
     if cube_format == 'horizon':
         pass
     elif cube_format == 'list':
@@ -50,7 +57,7 @@ def c2e(cubemap, h, w, cube_format='dice'):
     coor_y = (np.clip(coor_y, -0.5, 0.5) + 0.5) * face_w
 
     equirec = np.stack([
-        utils.sample_cubefaces(cube_faces[..., i], tp, coor_y, coor_x, order=1)
+        utils.sample_cubefaces(cube_faces[..., i], tp, coor_y, coor_x, order=order)
         for i in range(cube_faces.shape[3])
     ], axis=-1)
 

@@ -14,8 +14,7 @@ def e2p(e_img, fov_deg, u_deg, v_deg, out_hw, in_rot_deg=0, mode='bilinear'):
     h, w = e_img.shape[:2]
 
     try:
-        fov = fov_deg * np.pi / 180
-        h_fov, v_fov = fov
+        h_fov, v_fov = fov_deg[0] * np.pi / 180, fov_deg[1] * np.pi / 180
     except:
         h_fov, v_fov = fov, fov
     in_rot = in_rot_deg * np.pi / 180
@@ -27,7 +26,7 @@ def e2p(e_img, fov_deg, u_deg, v_deg, out_hw, in_rot_deg=0, mode='bilinear'):
     else:
         raise NotImplementedError('unknown mode')
 
-    u = u_deg * np.pi / 180
+    u = -u_deg * np.pi / 180
     v = v_deg * np.pi / 180
     xyz = utils.xyzpers(h_fov, v_fov, u, v, out_hw, in_rot)
     uv = utils.xyz2uv(xyz)

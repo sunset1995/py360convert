@@ -1,7 +1,5 @@
 # py360convert
 
-**This README is still under construction**
-
 Features of this project:
 - Convertion between cubemap and equirectangular  
     ![](assert/teaser_convertion.png)
@@ -19,13 +17,56 @@ Features of this project:
 ## Run with command line
 You can run command line to use the functionality. Please See `python convert360.py -h` for detailed. The python script is also an example code to see how to use this as a package in your code.
 
+```
+python convert360.py --convert e2c --i assert/example_input.png --o assert/example_e2c.png --w 200
+```
+| Input Equirectangular | Output Cubemap |
+| :---: | :----: |
+| ![](assert/example_input.png) | ![](assert/example_e2c.png) |
+
+-----
+
+```
+python convert360.py --convert c2e --i assert/example_e2c.png --o assert/example_c2e.png --w 800 --h 400
+```
+| Input Cubemap | Output Equirectangular |
+| :---: | :----: |
+| ![](assert/example_e2c.png) | ![](assert/example_c2e.png) |
+
+You can see the blurring artifacts in the polar region because the equirectangular in above figure are resampled twice (`e2c` then `c2e`).
+
+----
+
+```
+python convert360.py --convert e2p --i assert/example_input.png --o assert/example_e2p.png --w 300 --h 300 --u_deg 120 --v_deg 23
+```
+| Input Equirectangular | Output Perspective |
+| :---: | :----: |
+| ![](assert/example_input.png) | ![](assert/example_e2p.png) |
+
+
 ## Doc
-All of the below examples assume the packages are loaded as:
-```
-import numpy as np
-from PIL import Image
-import py360convert
-```
+
+#### `e2c(e_img, face_w=256, mode='bilinear', cube_format='dice')`
+Convert the given equirectangular to cubemap.  
+**Parameters**:
+- `e_img`: Numpy array with shape [H, W, C].
+- `face_w`: The width of each cube face.
+- `mode`: `bilinear` or `nearest`.
+- `cube_format`: See `c2e` explaination.
+
+
+#### `e2p(e_img, fov_deg, u_deg, v_deg, out_hw, in_rot_deg=0, mode='bilinear')`
+Take perspective image from given equirectangular.
+**Parameters**:
+- `e_img`: Numpy array with shape [H, W, C].
+- `fov_deg`: Field of view given in int or tuple `(h_fov_deg, v_fov_deg)`.
+- `u_deg`: Horizontal viewing angle in range [-pi, pi]. (- Left / + Right).
+- `v_deg`: Vertical viewing angle in range [-pi/2, pi/2]. (- Down/ + Up).
+- `out_hw`: Output image `(height, width)` in tuple.
+- `in_rot_deg`: Inplane rotation.
+- `mode`: `bilinear` or `nearest`.
+
 
 #### `c2e(cubemap, h, w, cube_format='dice')`
 Convert the given cubemap to equirectangular.  
@@ -37,6 +78,10 @@ Convert the given cubemap to equirectangular.
 
 **Example**:
 ```
+import numpy as np
+from PIL import Image
+import py360convert
+
 cube_dice = np.array(Image.open('assert/demo_cube.png'))
 
 # You can make convertion between supported cubemap format
