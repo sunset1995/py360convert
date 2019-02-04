@@ -83,7 +83,7 @@ Convert the given cubemap to equirectangular.
 - `cube_format`: 'dice' (default) or 'horizon' or 'dict' or 'list'. Telling the format of the given `cubemap`.
 
 **Example**:
-```
+```python
 import numpy as np
 from PIL import Image
 import py360convert
