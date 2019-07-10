@@ -81,6 +81,14 @@ Convert the given cubemap to equirectangular.
 - `h`: Output equirectangular height.
 - `w`: Output equirectangular width.
 - `cube_format`: 'dice' (default) or 'horizon' or 'dict' or 'list'. Telling the format of the given `cubemap`.
+    - Say that each face of the cube is in shape of `256 (width) x 256 (height)`
+    - 'dice': a numpy array in shape of `1024 x 768` like below example
+        <img src="assert/cube_dice.png" height="200">
+    - 'horizon': a numpy array in shape of `1536 x 256` like below example
+        <img src="assert/cube_horizon.png" height="100">
+    - 'list': a `list` with 6 elements each of which is a numpy array in shape of `256 x 256`. It's just converted from 'horizon' format with one line of code: `np.split(cube_h, 6, axis=1)`.
+    - 'dict': a `dict` with 6 elements with keys `'F', 'R', 'B', 'L', 'U', 'D'` each of which is a numpy array in shape of `256 x 256`.
+    - Please refer to [the source code](https://github.com/sunset1995/py360convert/blob/master/py360convert/utils.py#L176) if you still have question about the conversion between formats.
 
 **Example**:
 ```python
