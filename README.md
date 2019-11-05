@@ -1,6 +1,17 @@
 # py360convert
 
-Features of this project:
+## To Run
+To test each modules, go to py320convert/modules/ <br>
+to test e2c --> convert_e2c.py <br>
+to test c2e --> convert_c2e.py <br>
+Note: uncomment the code at the end of the file and run <br>
+
+Or run the convert36 directly from commandline <br>
+```
+convert360 --convert e2c --i assert/example_input.png --o assert/example_e2c.png --w 200
+```
+
+## Features of this project:
 - Convertion between cubemap and equirectangular  
     ![](assert/teaser_convertion.png)
 - Equirectangular to planar  
