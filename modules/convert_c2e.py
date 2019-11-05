@@ -12,6 +12,11 @@ from py360convert import py360convert
 
 
 def read_img(img_path):
+    """
+
+    :param img_path: path to the input image
+    :return: converted image array list
+    """
     img = np.array(Image.open(img_path))
     if len(img.shape) == 2:
         img = img[..., None]
@@ -19,11 +24,22 @@ def read_img(img_path):
 
 
 def get_filename(img_path):
+    """
+
+    :param img_path: path to the input image
+    :return: file name without the extension
+    """
     fname = str(img_path).split("/")[-1]
     return fname.split(".")[0]
 
 
 def convert_dice_to_img(cubemap_path,output_folder_path):
+    """
+
+    :param cubemap_path: dice image path
+    :param output_folder_path:  path to the output folder to store the image
+    :return: converted dice image to singe image
+    """
     f_name = get_filename(cubemap_path)
     img = read_img(cubemap_path)
     converted_img = py360convert.c2e(img, h=724, w=320, mode='bilinear', cube_format='dice')
@@ -32,6 +48,12 @@ def convert_dice_to_img(cubemap_path,output_folder_path):
 
 
 def convert_dict_to_img(cubemap_list_path,output_folder_path):
+    """
+
+    :param cubemap_list_path: list of image path with ['F', 'R', 'B', 'L', 'U', 'D'] element at the end of the filename in order.
+    :param output_folder_path:  path to the output folder to store the image
+    :return: converted dict of image to singe image
+    """
     img_dict = {}
     f_name = None
     for i in cubemap_list_path:
@@ -53,6 +75,12 @@ def convert_dict_to_img(cubemap_list_path,output_folder_path):
 
 
 def convert_list_to_img(cubemap_list_path,output_folder_path):
+    """
+
+    :param cubemap_list_path: list of image path with [0....n] element at the end of the filename in order.
+    :param output_folder_path:  path to the output folder to store the image
+    :return: converted list of image to singe image
+    """
     img_array_list = []
     f_name = None
     for i in cubemap_list_path:
