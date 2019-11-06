@@ -1,7 +1,7 @@
 # py360convert
 
 ## To Run
-To test each modules, go to py320convert/modules/ <br>
+To test each modules, go to py360convert/modules/ <br>
 to test e2c --> convert_e2c.py <br>
 to test c2e --> convert_c2e.py <br>
 Note: uncomment the code at the end of the file and run <br>
