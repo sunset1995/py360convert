@@ -191,7 +191,7 @@ def cube_h2dict(cube_h):
 
 
 def cube_dict2h(cube_dict, face_k=['F', 'R', 'B', 'L', 'U', 'D']):
-    assert len(k) == 6
+    assert len(face_k) == 6
     return cube_list2h([cube_dict[k] for k in face_k])
 
 
