@@ -1,6 +1,6 @@
 # py360convert
 
-**I plan to refactor this project at the end of November but have no time to respond any questions before then.**
+**A new library including more fuctionality for 360 is under contruction by my colleague. This repo will be depreciated then.**
 
 Features of this project:
 - Convertion between cubemap and equirectangular  
