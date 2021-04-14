@@ -5,6 +5,20 @@ from scipy.ndimage import map_coordinates
 def xyzcube(face_w):
     '''
     Return the xyz cordinates of the unit cube in [F R B L U D] format.
+
+    Parameters:
+
+        face_w: int 
+            Specify the length of each face of the cubemap.
+
+    Returns:
+
+        out: ndarray
+            An array object with dimension (face_w, face_w * 6, 3)
+            which store the each face of numalized cube coordinates. 
+            The cube is centered at the origin so that each face k 
+            in out[:, k, :] has range [-0.5, 0.5] x [-0.5, 0.5].
+
     '''
     out = np.zeros((face_w, face_w * 6, 3), np.float32)
     rng = np.linspace(-0.5, 0.5, num=face_w, dtype=np.float32)
