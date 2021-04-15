@@ -17,7 +17,7 @@ def xyzcube(face_w):
             An array object with dimension (face_w, face_w * 6, 3)
             which store the each face of numalized cube coordinates. 
             The cube is centered at the origin so that each face k 
-            in out[:, k, :] has range [-0.5, 0.5] x [-0.5, 0.5].
+            in out has range [-0.5, 0.5] x [-0.5, 0.5].
 
     '''
     out = np.zeros((face_w, face_w * 6, 3), np.float32)
@@ -100,25 +100,22 @@ def xyz2uv(xyz):
     out put (u, v).
 
     Parameters:
-
         xyz: ndarray 
             An array object in shape of [..., 3].
 
     Returns:
-
         out: ndarray
             An array object in shape of [..., 2], 
             any point i of this array is in [-pi, pi].
 
     Notes:
         In this project, e2c calls utils.xyz2uv(xyz) where
-            xy is in [-0.5, 0.5] x [-0.5, 0.5] 
-            z is either -0.5 or 0.5.
+            xyz is in [-0.5, 0.5] x [-0.5, 0.5] x [-0.5, 0.5] 
         so 
             u is in [-pi, pi] 
-            v is in [-pi/4, pi/4]
+            v is in [-pi/2, pi/2]
         so 
-            any point i of output array is in [-pi, pi] x [-pi/4, pi/4].
+            any point i of output array is in [-pi, pi] x [-pi/2, pi/2].
 
 
     '''
@@ -146,30 +143,28 @@ def uv2coor(uv, h, w):
     '''
     
     Transform spherical(r, u, v) into equirectangular(x, y)
-    with height h and width w. Notice that the coordinate of 
-    the equirectangular is from (0.5, 0.5) to (w-0.5, h-0.5).
+    with height h and width w. Assume that u has range 2pi and
+    v has range pi. Notice that the coordinate of the equirectangular 
+    is from (0.5, 0.5) to (h-0.5, w-0.5).
 
     Parameters:
-
         uv: ndarray 
-            An array object in shape of [..., 2]
+            An array object in shape of [..., 2].
         h: int
-            Height of the equirectangular image
+            Height of the equirectangular image.
         w: int
-            Width of the equirectangular image
+            Width of the equirectangular image.
 
     Returns:
-
         out: ndarray
-            An array object in shape of [..., 2], 
-            any point i of this array is in [-0.5, w-0.5] x [1.5h-0.5, -0.5h-0.5].
+            An array object in shape of [..., 2].
 
     Notes:
         In this project, e2c calls utils.uv2coor(uv, h, w) where
-            uv is in [-pi, pi] x [-pi/4, pi/4]
+            uv is in [-pi, pi] x [-pi/2, pi/2]
         so 
-            coor_x is in [0, w-0.5]
-            coor_y is in [0.75h-0.5, 0.25h-0.5]          
+            coor_x is in [-0.5, w-0.5]
+            coor_y is in [-0.5, h-0.5]          
 
     '''
     u, v = np.split(uv, 2, axis=-1)
