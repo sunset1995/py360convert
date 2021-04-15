@@ -17,8 +17,8 @@ def e2c(e_img, face_w=256, mode='bilinear', cube_format='dice'):
     else:
         raise NotImplementedError('unknown mode')
 
-    xyz = utils.xyzcube(face_w) 
-    uv = utils.xyz2uv(xyz) 
+    xyz = utils.xyzcube(face_w)
+    uv = utils.xyz2uv(xyz)
     coor_xy = utils.uv2coor(uv, h, w)
 
     cubemap = np.stack([

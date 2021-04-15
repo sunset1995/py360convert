@@ -95,14 +95,30 @@ def xyzpers(h_fov, v_fov, u, v, out_hw, in_rot):
 
 def xyz2uv(xyz):
     '''
-    xyz: ndarray in shape of [..., 3]
+    
+    Transform cartesian (x,y,z) to spherical(r, u, v), and only
+    out put (u, v).
+
+    Parameters:
+
+        xyz: ndarray 
+            An array object in shape of [..., 3].
+
+    Returns:
+
+        out: ndarray
+            An array object with dimension [..., 2], 
+            any point i of this array is in [-pi, pi].
+
     '''
     x, y, z = np.split(xyz, 3, axis=-1)
     u = np.arctan2(x, z)
     c = np.sqrt(x**2 + z**2)
     v = np.arctan2(y, c)
 
-    return np.concatenate([u, v], axis=-1)
+    out = np.concatenate([u, v], axis=-1)
+
+    return out
 
 
 def uv2unitxyz(uv):
@@ -125,7 +141,9 @@ def uv2coor(uv, h, w):
     coor_x = (u / (2 * np.pi) + 0.5) * w - 0.5
     coor_y = (-v / np.pi + 0.5) * h - 0.5
 
-    return np.concatenate([coor_x, coor_y], axis=-1)
+    out = np.concatenate([coor_x, coor_y], axis=-1)
+    
+    return out
 
 
 def coor2uv(coorxy, h, w):
