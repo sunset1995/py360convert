@@ -145,8 +145,9 @@ def uv2unitxyz(uv):
 def uv2coor(uv, h, w):
     '''
     
-    Transform cartesian (x,y,z) to spherical(r, u, v), and only
-    out put (u, v).
+    Transform spherical(r, u, v) into equirectangular(x, y)
+    with height h and width w. Notice that the coordinate of 
+    the equirectangular is from (0.5, 0.5) to (w-0.5, h-0.5).
 
     Parameters:
 
