@@ -3,6 +3,7 @@
 import argparse
 import numpy as np
 from PIL import Image
+import os
 
 import py360convert
 
@@ -10,7 +11,7 @@ import py360convert
 # Parsing command line arguments
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter,
                                  description='Convertion between cubemap and equirectangular or equirectangular to perspective.')
-parser.add_argument('--convert', choices=['c2e', 'e2c', 'e2p'], required=True,
+parser.add_argument('--convert', choices=['c2e', 'e2c', 'e2p', 'e2clist'], required=True,
                     help='What convertion to apply.')
 parser.add_argument('--i', required=True,
                     help='Path to input image.')
@@ -45,6 +46,8 @@ if args.convert == 'c2e':
     out = py360convert.c2e(img, h=args.h, w=args.w, mode=args.mode)
 elif args.convert == 'e2c':
     out = py360convert.e2c(img, face_w=args.w, mode=args.mode)
+elif args.convert == 'e2clist':
+    out = py360convert.e2c(img, face_w=args.w, mode=args.mode, cube_format="list")
 elif args.convert == 'e2p':
     out = py360convert.e2p(img, fov_deg=(args.h_fov, args.v_fov), u_deg=args.u_deg, v_deg=args.v_deg,
                            out_hw=(args.h, args.w), in_rot_deg=args.in_rot_deg, mode=args.mode)
@@ -52,4 +55,9 @@ else:
     raise NotImplementedError('Unknown convertion')
 
 # Output image
-Image.fromarray(out.astype(np.uint8)).save(args.o)
+if args.convert=='e2clist':
+  (root, ext) = os.path.splitext(args.o)
+  for idx,face in enumerate(out):
+    Image.fromarray(face.astype(np.uint8)).save("%s-%.2d%s"%(root,idx,ext))
+else:
+  Image.fromarray(out.astype(np.uint8)).save(args.o)
