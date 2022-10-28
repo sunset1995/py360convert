@@ -52,4 +52,4 @@ else:
     raise NotImplementedError('Unknown convertion')
 
 # Output image
-Image.fromarray(out.astype(np.uint8)).save(args.o)
+Image.fromarray(out.astype(np.uint8).squeeze()).save(args.o)
