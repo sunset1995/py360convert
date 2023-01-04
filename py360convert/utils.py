@@ -48,7 +48,8 @@ def equirect_facetype(h, w):
     '''
     0F 1R 2B 3L 4U 5D
     '''
-    tp = np.roll(np.arange(4).repeat(w // 4)[None, :].repeat(h, 0), 3 * w // 8, 1)
+    tp = np.roll(np.arange(4).repeat(w // 4)
+                 [None, :].repeat(h, 0), 3 * w // 8, 1)
 
     # Prepare ceil mask
     mask = np.zeros((h, w // 4), np.bool)
@@ -186,8 +187,16 @@ def cube_list2h(cube_list):
 
 def cube_h2dict(cube_h):
     cube_list = cube_h2list(cube_h)
+    # Order: F R B L U D
+    for idx_face in range(6):
+        face = cube_list[idx_face]
+        if idx_face in [1, 2]:
+            face = np.flip(face, axis=1)
+        if idx_face == 4:
+            face = np.flip(face, axis=0)
+        cube_list[idx_face] = face
     return dict([(k, cube_list[i])
-                 for i, k in enumerate(['F', 'R', 'B', 'L', 'U', 'D'])])
+                 for i, k in enumerate(['pz', 'px', 'nz', 'nx', 'py', 'ny'])])
 
 
 def cube_dict2h(cube_dict, face_k=['F', 'R', 'B', 'L', 'U', 'D']):
