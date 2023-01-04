@@ -196,7 +196,7 @@ def cube_h2dict(cube_h):
             face = np.flip(face, axis=0)
         cube_list[idx_face] = face
     return dict([(k, cube_list[i])
-                 for i, k in enumerate(['pz', 'px', 'nz', 'nx', 'py', 'ny'])])
+                 for i, k in enumerate(['F', 'R', 'B', 'L', 'U', 'D'])])
 
 
 def cube_dict2h(cube_dict, face_k=['F', 'R', 'B', 'L', 'U', 'D']):
