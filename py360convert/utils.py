@@ -145,7 +145,7 @@ def xyz2uv(xyz: NDArray[DType]) -> NDArray[DType]:
     u = np.arctan2(x, z)
     c = np.sqrt(np.square(x) + np.square(z))
     v = np.arctan2(y, c)
-    out = np.concatenate([u, v], axis=-1)
+    out = np.concatenate([u, v], axis=-1, dtype=xyz.dtype)
     return out
 
 
@@ -155,7 +155,7 @@ def uv2unitxyz(uv: NDArray[DType]) -> NDArray[DType]:
     c = np.cos(v)
     x = c * np.sin(u)
     z = c * np.cos(u)
-    return np.concatenate([x, y, z], axis=-1)
+    return np.concatenate([x, y, z], axis=-1, dtype=uv.dtype)
 
 
 def uv2coor(uv: NDArray[DType], h: int, w: int) -> NDArray[DType]:
@@ -205,7 +205,7 @@ def sample_equirec(e_img: NDArray[DType], coor_xy: NDArray, order: int) -> NDArr
     coor_x, coor_y = np.split(coor_xy, 2, axis=-1)
     pad_u = np.roll(e_img[[0]], w // 2, 1)
     pad_d = np.roll(e_img[[-1]], w // 2, 1)
-    e_img = np.concatenate([e_img, pad_d, pad_u], 0)
+    e_img = np.concatenate([e_img, pad_d, pad_u], 0, dtype=e_img.dtype)
     return map_coordinates(e_img, [coor_y, coor_x], order=order, mode="wrap")[..., 0]  # pyright: ignore[reportReturnType]
 
 
@@ -231,7 +231,7 @@ def sample_cubefaces(
     pad_ud[4, 1] = cube_faces[2, 0, ::-1]
     pad_ud[5, 0] = cube_faces[2, -1, ::-1]
     pad_ud[5, 1] = cube_faces[0, -1, :]
-    cube_faces = np.concatenate([cube_faces, pad_ud], 1)
+    cube_faces = np.concatenate([cube_faces, pad_ud], 1, dtype=cube_faces.dtype)
 
     # Pad left right
     pad_lr = np.zeros((6, cube_faces.shape[1], 2), dtype=cube_faces.dtype)
@@ -247,7 +247,7 @@ def sample_cubefaces(
     pad_lr[4, 1:-1, 1] = cube_faces[3, 0, :]
     pad_lr[5, 1:-1, 0] = cube_faces[1, -2, :]
     pad_lr[5, 1:-1, 1] = cube_faces[3, -2, ::-1]
-    cube_faces = np.concatenate([cube_faces, pad_lr], 2)
+    cube_faces = np.concatenate([cube_faces, pad_lr], 2, dtype=cube_faces.dtype)
 
     return map_coordinates(cube_faces, [tp, coor_y, coor_x], order=order, mode="wrap")  # pyright: ignore[reportReturnType]
 
@@ -268,7 +268,12 @@ def cube_list2h(cube_list: list[NDArray[DType]]) -> NDArray[DType]:
             raise ValueError(
                 f"Face {i}'s shape {face.shape} doesn't match the first face's shape {cube_list[0].shape}."
             )
-    return np.concatenate(cube_list, axis=1)
+        if face.dtype != cube_list[0].dtype:
+            raise ValueError(
+                f"Face {i}'s dtype {face.dtype} doesn't match the first face's shape {cube_list[0].dtype}."
+            )
+
+    return np.concatenate(cube_list, axis=1, dtype=cube_list[0].dtype)
 
 
 def cube_h2dict(cube_h: NDArray[DType]) -> dict[str, NDArray[DType]]:
