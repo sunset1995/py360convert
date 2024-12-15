@@ -5,19 +5,19 @@ from scipy.ndimage import map_coordinates
 
 def xyzcube(face_w):
     """
-    Return the xyz cordinates of the unit cube in [F R B L U D] format.
+    Return the xyz coordinates of the unit cube in [F R B L U D] format.
 
-    Parameters:
-
-        face_w: int 
+    Parameters
+    ----------
+        face_w: int
             Specify the length of each face of the cubemap.
 
-    Returns:
-
+    Returns
+    -------
         out: ndarray
             An array object with dimension (face_w, face_w * 6, 3)
-            which store the each face of numalized cube coordinates. 
-            The cube is centered at the origin so that each face k 
+            which store the each face of numalized cube coordinates.
+            The cube is centered at the origin so that each face k
             in out has range [-0.5, 0.5] x [-0.5, 0.5].
 
     """
@@ -96,26 +96,29 @@ def xyzpers(h_fov, v_fov, u, v, out_hw, in_rot):
 
 def xyz2uv(xyz):
     """
-    
+
     Transform cartesian (x,y,z) to spherical(r, u, v), and only
     out put (u, v).
 
-    Parameters:
-        xyz: ndarray 
+    Parameters
+    ----------
+        xyz: ndarray
             An array object in shape of [..., 3].
 
-    Returns:
+    Returns
+    -------
         out: ndarray
-            An array object in shape of [..., 2], 
+            An array object in shape of [..., 2],
             any point i of this array is in [-pi, pi].
 
-    Notes:
+    Notes
+    -----
         In this project, e2c calls utils.xyz2uv(xyz) where
-            xyz is in [-0.5, 0.5] x [-0.5, 0.5] x [-0.5, 0.5] 
-        so 
-            u is in [-pi, pi] 
+            xyz is in [-0.5, 0.5] x [-0.5, 0.5] x [-0.5, 0.5]
+        so
+            u is in [-pi, pi]
             v is in [-pi/2, pi/2]
-        so 
+        so
             any point i of output array is in [-pi, pi] x [-pi/2, pi/2].
 
 
@@ -142,30 +145,33 @@ def uv2unitxyz(uv):
 
 def uv2coor(uv, h, w):
     """
-    
+
     Transform spherical(r, u, v) into equirectangular(x, y)
     with height h and width w. Assume that u has range 2pi and
-    v has range pi. Notice that the coordinate of the equirectangular 
+    v has range pi. Notice that the coordinate of the equirectangular
     is from (0.5, 0.5) to (h-0.5, w-0.5).
 
-    Parameters:
-        uv: ndarray 
+    Parameters
+    ----------
+        uv: ndarray
             An array object in shape of [..., 2].
         h: int
             Height of the equirectangular image.
         w: int
             Width of the equirectangular image.
 
-    Returns:
+    Returns
+    -------
         out: ndarray
             An array object in shape of [..., 2].
 
-    Notes:
+    Notes
+    -----
         In this project, e2c calls utils.uv2coor(uv, h, w) where
             uv is in [-pi, pi] x [-pi/2, pi/2]
-        so 
+        so
             coor_x is in [-0.5, w-0.5]
-            coor_y is in [-0.5, h-0.5]          
+            coor_y is in [-0.5, h-0.5]
 
     """
     u, v = np.split(uv, 2, axis=-1)
