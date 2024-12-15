@@ -1,9 +1,10 @@
 import numpy as np
+from numpy.typing import NDArray
 from scipy.ndimage import map_coordinates
 
 
 def xyzcube(face_w):
-    '''
+    """
     Return the xyz cordinates of the unit cube in [F R B L U D] format.
 
     Parameters:
@@ -19,34 +20,34 @@ def xyzcube(face_w):
             The cube is centered at the origin so that each face k 
             in out has range [-0.5, 0.5] x [-0.5, 0.5].
 
-    '''
+    """
     out = np.zeros((face_w, face_w * 6, 3), np.float32)
     rng = np.linspace(-0.5, 0.5, num=face_w, dtype=np.float32)
     grid = np.stack(np.meshgrid(rng, -rng), -1)
 
     # Front face (z = 0.5)
-    out[:, 0*face_w:1*face_w, [0, 1]] = grid
-    out[:, 0*face_w:1*face_w, 2] = 0.5
+    out[:, 0 * face_w : 1 * face_w, [0, 1]] = grid
+    out[:, 0 * face_w : 1 * face_w, 2] = 0.5
 
     # Right face (x = 0.5)
-    out[:, 1*face_w:2*face_w, [2, 1]] = grid
-    out[:, 1*face_w:2*face_w, 0] = 0.5
+    out[:, 1 * face_w : 2 * face_w, [2, 1]] = grid
+    out[:, 1 * face_w : 2 * face_w, 0] = 0.5
 
     # Back face (z = -0.5)
-    out[:, 2*face_w:3*face_w, [0, 1]] = grid
-    out[:, 2*face_w:3*face_w, 2] = -0.5
+    out[:, 2 * face_w : 3 * face_w, [0, 1]] = grid
+    out[:, 2 * face_w : 3 * face_w, 2] = -0.5
 
     # Left face (x = -0.5)
-    out[:, 3*face_w:4*face_w, [2, 1]] = grid
-    out[:, 3*face_w:4*face_w, 0] = -0.5
+    out[:, 3 * face_w : 4 * face_w, [2, 1]] = grid
+    out[:, 3 * face_w : 4 * face_w, 0] = -0.5
 
     # Up face (y = 0.5)
-    out[:, 4*face_w:5*face_w, [0, 2]] = grid
-    out[:, 4*face_w:5*face_w, 1] = 0.5
+    out[:, 4 * face_w : 5 * face_w, [0, 2]] = grid
+    out[:, 4 * face_w : 5 * face_w, 1] = 0.5
 
     # Down face (y = -0.5)
-    out[:, 5*face_w:6*face_w, [0, 2]] = grid
-    out[:, 5*face_w:6*face_w, 1] = -0.5
+    out[:, 5 * face_w : 6 * face_w, [0, 2]] = grid
+    out[:, 5 * face_w : 6 * face_w, 1] = -0.5
 
     return out
 
@@ -59,13 +60,13 @@ def equirect_uvgrid(h, w):
 
 
 def equirect_facetype(h, w):
-    '''
+    """
     0F 1R 2B 3L 4U 5D
-    '''
+    """
     tp = np.roll(np.arange(4).repeat(w // 4)[None, :].repeat(h, 0), 3 * w // 8, 1)
 
     # Prepare ceil mask
-    mask = np.zeros((h, w // 4), np.bool)
+    mask = np.zeros((h, w // 4), np.bool_)
     idx = np.linspace(-np.pi, np.pi, w // 4) / 4
     idx = h // 2 - np.round(np.arctan(np.cos(idx)) * h / np.pi).astype(int)
     for i, j in enumerate(idx):
@@ -94,7 +95,7 @@ def xyzpers(h_fov, v_fov, u, v, out_hw, in_rot):
 
 
 def xyz2uv(xyz):
-    '''
+    """
     
     Transform cartesian (x,y,z) to spherical(r, u, v), and only
     out put (u, v).
@@ -118,7 +119,7 @@ def xyz2uv(xyz):
             any point i of output array is in [-pi, pi] x [-pi/2, pi/2].
 
 
-    '''
+    """
     x, y, z = np.split(xyz, 3, axis=-1)
     u = np.arctan2(x, z)
     c = np.sqrt(x**2 + z**2)
@@ -140,7 +141,7 @@ def uv2unitxyz(uv):
 
 
 def uv2coor(uv, h, w):
-    '''
+    """
     
     Transform spherical(r, u, v) into equirectangular(x, y)
     with height h and width w. Assume that u has range 2pi and
@@ -166,7 +167,7 @@ def uv2coor(uv, h, w):
             coor_x is in [-0.5, w-0.5]
             coor_y is in [-0.5, h-0.5]          
 
-    '''
+    """
     u, v = np.split(uv, 2, axis=-1)
     coor_x = (u / (2 * np.pi) + 0.5) * w - 0.5
     coor_y = (-v / np.pi + 0.5) * h - 0.5
@@ -190,8 +191,7 @@ def sample_equirec(e_img, coor_xy, order):
     pad_u = np.roll(e_img[[0]], w // 2, 1)
     pad_d = np.roll(e_img[[-1]], w // 2, 1)
     e_img = np.concatenate([e_img, pad_d, pad_u], 0)
-    return map_coordinates(e_img, [coor_y, coor_x],
-                           order=order, mode='wrap')[..., 0]
+    return map_coordinates(e_img, [coor_y, coor_x], order=order, mode="wrap")[..., 0]
 
 
 def sample_cubefaces(cube_faces, tp, coor_y, coor_x, order):
@@ -232,33 +232,42 @@ def sample_cubefaces(cube_faces, tp, coor_y, coor_x, order):
     pad_lr[5, 1:-1, 1] = cube_faces[3, -2, ::-1]
     cube_faces = np.concatenate([cube_faces, pad_lr], 2)
 
-    return map_coordinates(cube_faces, [tp, coor_y, coor_x], order=order, mode='wrap')
+    return map_coordinates(cube_faces, [tp, coor_y, coor_x], order=order, mode="wrap")
 
 
-def cube_h2list(cube_h):
-    assert cube_h.shape[0] * 6 == cube_h.shape[1]
+def cube_h2list(cube_h) -> list[NDArray]:
+    """Split an image into a list of 6 faces."""
+    if cube_h.shape[0] * 6 != cube_h.shape[1]:
+        raise ValueError("Cubemap's width must by 6x its height.")
     return np.split(cube_h, 6, axis=1)
 
 
-def cube_list2h(cube_list):
-    assert len(cube_list) == 6
-    assert sum(face.shape == cube_list[0].shape for face in cube_list) == 6
+def cube_list2h(cube_list: list[NDArray]) -> NDArray:
+    """Concatenate a list of 6 face images side-by-side."""
+    if len(cube_list) != 6:
+        raise ValueError(f"6 elements must be provided to construct a cube; got {len(cube_list)}.")
+    for i, face in enumerate(cube_list):
+        if face.shape != cube_list[0].shape:
+            raise ValueError(
+                f"Face {i}'s shape {face.shape} doesn't match the first face's shape {cube_list[0].shape}."
+            )
     return np.concatenate(cube_list, axis=1)
 
 
 def cube_h2dict(cube_h):
     cube_list = cube_h2list(cube_h)
-    return dict([(k, cube_list[i])
-                 for i, k in enumerate(['F', 'R', 'B', 'L', 'U', 'D'])])
+    return dict([(k, cube_list[i]) for i, k in enumerate(["F", "R", "B", "L", "U", "D"])])
 
 
-def cube_dict2h(cube_dict, face_k=['F', 'R', 'B', 'L', 'U', 'D']):
-    assert len(face_k) == 6
+def cube_dict2h(cube_dict, face_k=["F", "R", "B", "L", "U", "D"]):
+    if len(face_k) != 6:
+        raise ValueError(f"6 face_k keys must be provided to construct a cube; got {len(face_k)}.")
     return cube_list2h([cube_dict[k] for k in face_k])
 
 
-def cube_h2dice(cube_h):
-    assert cube_h.shape[0] * 6 == cube_h.shape[1]
+def cube_h2dice(cube_h: NDArray) -> NDArray:
+    if cube_h.shape[0] * 6 != cube_h.shape[1]:
+        raise ValueError("Cubemap's width must by 6x its height.")
     w = cube_h.shape[0]
     cube_dice = np.zeros((w * 3, w * 4, cube_h.shape[2]), dtype=cube_h.dtype)
     cube_list = cube_h2list(cube_h)
@@ -270,36 +279,38 @@ def cube_h2dice(cube_h):
             face = np.flip(face, axis=1)
         if i == 4:
             face = np.flip(face, axis=0)
-        cube_dice[sy*w:(sy+1)*w, sx*w:(sx+1)*w] = face
+        cube_dice[sy * w : (sy + 1) * w, sx * w : (sx + 1) * w] = face
     return cube_dice
 
 
-def cube_dice2h(cube_dice):
+def cube_dice2h(cube_dice: NDArray) -> NDArray:
     w = cube_dice.shape[0] // 3
-    assert cube_dice.shape[0] == w * 3 and cube_dice.shape[1] == w * 4
+    if cube_dice.shape[0] % 3 != 0:
+        raise ValueError("Dice image height must be a multiple of 3.")
+    if cube_dice.shape[1] != w * 4:
+        raise ValueError(f'Dice width must be 4 "faces" (4x{w}={4*w}) wide.')
     cube_h = np.zeros((w, w * 6, cube_dice.shape[2]), dtype=cube_dice.dtype)
     # Order: F R B L U D
     sxy = [(1, 1), (2, 1), (3, 1), (0, 1), (1, 0), (1, 2)]
     for i, (sx, sy) in enumerate(sxy):
-        face = cube_dice[sy*w:(sy+1)*w, sx*w:(sx+1)*w]
+        face = cube_dice[sy * w : (sy + 1) * w, sx * w : (sx + 1) * w]
         if i in [1, 2]:
             face = np.flip(face, axis=1)
         if i == 4:
             face = np.flip(face, axis=0)
-        cube_h[:, i*w:(i+1)*w] = face
+        cube_h[:, i * w : (i + 1) * w] = face
     return cube_h
 
 
 def rotation_matrix(rad, ax):
     ax = np.array(ax)
-    assert len(ax.shape) == 1 and ax.shape[0] == 3
+    if ax.shape != (3,):
+        raise ValueError(f"ax must be shape (3,); got {ax.shape}")
     ax = ax / np.sqrt((ax**2).sum())
     R = np.diag([np.cos(rad)] * 3)
     R = R + np.outer(ax, ax) * (1.0 - np.cos(rad))
 
     ax = ax * np.sin(rad)
-    R = R + np.array([[0, -ax[2], ax[1]],
-                      [ax[2], 0, -ax[0]],
-                      [-ax[1], ax[0], 0]])
+    R = R + np.array([[0, -ax[2], ax[1]], [ax[2], 0, -ax[0]], [-ax[1], ax[0], 0]])
 
     return R
