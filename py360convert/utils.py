@@ -1,3 +1,6 @@
+from collections.abc import Sequence
+from typing import Any
+
 import numpy as np
 from numpy.typing import NDArray
 from scipy.ndimage import map_coordinates
@@ -260,12 +263,12 @@ def cube_list2h(cube_list: list[NDArray]) -> NDArray:
     return np.concatenate(cube_list, axis=1)
 
 
-def cube_h2dict(cube_h):
-    cube_list = cube_h2list(cube_h)
-    return dict([(k, cube_list[i]) for i, k in enumerate(["F", "R", "B", "L", "U", "D"])])
+def cube_h2dict(cube_h) -> dict[str, NDArray]:
+    return dict(zip("FRBLUD", cube_h2list(cube_h)))
 
 
-def cube_dict2h(cube_dict, face_k=["F", "R", "B", "L", "U", "D"]):
+def cube_dict2h(cube_dict: dict[Any, NDArray], face_k: Sequence | None = None) -> NDArray:
+    face_k = face_k or "FRBLUD"
     if len(face_k) != 6:
         raise ValueError(f"6 face_k keys must be provided to construct a cube; got {len(face_k)}.")
     return cube_list2h([cube_dict[k] for k in face_k])
