@@ -55,7 +55,7 @@ def e2c(
     Parameters
     ----------
     e_img: ndarray
-        Equirectangular image in shape of [H, W, *].
+        Equirectangular image in shape of [H,W] or [H, W, *].
     face_w: int
         Length of each face of the cubemap
     mode: Literal["bilinear", "nearest"]
@@ -68,8 +68,14 @@ def e2c(
     Union[NDArray, list[NDArray], dict[str, NDArray]]
         Cubemap in format specified by `cube_format`.
     """
-    if e_img.ndim != 3:
-        raise ValueError("e_img must have 3 dimensions.")
+    if e_img.ndim not in (2, 3):
+        raise ValueError("e_img must have 2 or 3 dimensions.")
+    if e_img.ndim == 2:
+        e_img = e_img[..., None]
+        squeeze = True
+    else:
+        squeeze = False
+
     h, w = e_img.shape[:2]
     if mode == "bilinear":
         order = 1
@@ -89,13 +95,20 @@ def e2c(
     )
 
     if cube_format == "horizon":
-        pass
+        if squeeze:
+            cubemap = cubemap[..., 0]
     elif cube_format == "list":
         cubemap = cube_h2list(cubemap)
+        if squeeze:
+            cubemap = [x[..., 0] for x in cubemap]
     elif cube_format == "dict":
         cubemap = cube_h2dict(cubemap)
+        if squeeze:
+            cubemap = {k: v[..., 0] for k, v in cubemap.items()}
     elif cube_format == "dice":
         cubemap = cube_h2dice(cubemap)
+        if squeeze:
+            cubemap = cubemap[..., 0]
     else:
         raise NotImplementedError
 

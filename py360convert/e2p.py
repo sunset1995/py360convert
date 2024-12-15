@@ -28,7 +28,7 @@ def e2p(
     Parameters
     ----------
     e_img: ndarray
-        Equirectangular image in shape of [H, W, *].
+        Equirectangular image in shape of [H,W] or [H, W, *].
     fov_deg: scalar or (scalar, scalar) field of view in degree
         Field of view given in float or tuple (h_fov_deg, v_fov_deg).
     u_deg:   horizon viewing angle in range [-180, 180]
@@ -47,8 +47,14 @@ def e2p(
     np.ndarray
         Perspective image.
     """
-    if e_img.ndim != 3:
-        raise ValueError("e_img must have 3 dimensions.")
+    if e_img.ndim not in (2, 3):
+        raise ValueError("e_img must have 2 or 3 dimensions.")
+    if e_img.ndim == 2:
+        e_img = e_img[..., None]
+        squeeze = True
+    else:
+        squeeze = False
+
     h, w = e_img.shape[:2]
 
     if isinstance(fov_deg, Real):
@@ -73,4 +79,4 @@ def e2p(
 
     pers_img = np.stack([sample_equirec(e_img[..., i], coor_xy, order=order) for i in range(e_img.shape[2])], axis=-1)
 
-    return pers_img
+    return pers_img[..., 0] if squeeze else pers_img

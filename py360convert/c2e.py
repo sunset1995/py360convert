@@ -97,8 +97,15 @@ def c2e(
     else:
         raise ValueError('Unknown cube_format "{cube_format}".')
 
-    if cubemap.ndim != 3:
-        raise ValueError(f"Cubemap must have 3 dimensions; got {cubemap.ndim}.")
+    if cubemap.ndim not in (2, 3):
+        raise ValueError(f"Cubemap must have 2 or 3 dimensions; got {cubemap.ndim}.")
+
+    if cubemap.ndim == 2:
+        cubemap = cubemap[..., None]
+        squeeze = True
+    else:
+        squeeze = False
+
     if cubemap.shape[0] * 6 != cubemap.shape[1]:
         raise ValueError("Cubemap's width must by 6x its height.")
     if w % 8 != 0:
@@ -143,4 +150,4 @@ def c2e(
         axis=-1,
     )
 
-    return equirec
+    return equirec[..., 0] if squeeze else equirec
