@@ -9,7 +9,7 @@ def c2e(cubemap, h, w, mode="bilinear", cube_format="dice"):
     elif mode == "nearest":
         order = 0
     else:
-        raise NotImplementedError("unknown mode")
+        raise ValueError(f'Unknown mode "{mode}".')
 
     if cube_format == "horizon":
         pass
@@ -20,10 +20,14 @@ def c2e(cubemap, h, w, mode="bilinear", cube_format="dice"):
     elif cube_format == "dice":
         cubemap = utils.cube_dice2h(cubemap)
     else:
-        raise NotImplementedError("unknown cube_format")
-    assert len(cubemap.shape) == 3
-    assert cubemap.shape[0] * 6 == cubemap.shape[1]
-    assert w % 8 == 0
+        raise ValueError('Unknown cube_format "{cube_format}".')
+
+    if cubemap.ndim != 3:
+        raise ValueError(f"Cubemap must have 3 dimensions; got {cubemap.ndim}.")
+    if cubemap.shape[0] * 6 != cubemap.shape[1]:
+        raise ValueError("Cubemap's width must by 6x it's height.")
+    if w % 8 != 0:
+        raise ValueError("w must be a multiple of 8.")
     face_w = cubemap.shape[0]
 
     uv = utils.equirect_uvgrid(h, w)
