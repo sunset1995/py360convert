@@ -1,4 +1,5 @@
 import numpy as np
+from numpy.typing import NDArray
 from scipy.ndimage import map_coordinates
 
 
@@ -172,14 +173,22 @@ def sample_cubefaces(cube_faces, tp, coor_y, coor_x, order):
     return map_coordinates(cube_faces, [tp, coor_y, coor_x], order=order, mode="wrap")
 
 
-def cube_h2list(cube_h):
-    assert cube_h.shape[0] * 6 == cube_h.shape[1]
+def cube_h2list(cube_h) -> list[NDArray]:
+    """Split an image into a list of 6 faces."""
+    if cube_h.shape[0] * 6 != cube_h.shape[1]:
+        raise ValueError("Cubemap's width must by 6x its height.")
     return np.split(cube_h, 6, axis=1)
 
 
-def cube_list2h(cube_list):
-    assert len(cube_list) == 6
-    assert sum(face.shape == cube_list[0].shape for face in cube_list) == 6
+def cube_list2h(cube_list: list[NDArray]) -> NDArray:
+    """Concatenate a list of 6 face images side-by-side."""
+    if len(cube_list) != 6:
+        raise ValueError(f"6 elements must be provided to construct a cube; got {len(cube_list)}.")
+    for i, face in enumerate(cube_list):
+        if face.shape != cube_list[0].shape:
+            raise ValueError(
+                f"Face {i}'s shape {face.shape} doesn't match the first face's shape {cube_list[0].shape}."
+            )
     return np.concatenate(cube_list, axis=1)
 
 
@@ -189,12 +198,14 @@ def cube_h2dict(cube_h):
 
 
 def cube_dict2h(cube_dict, face_k=["F", "R", "B", "L", "U", "D"]):
-    assert len(face_k) == 6
+    if len(face_k) != 6:
+        raise ValueError(f"6 face_k keys must be provided to construct a cube; got {len(face_k)}.")
     return cube_list2h([cube_dict[k] for k in face_k])
 
 
-def cube_h2dice(cube_h):
-    assert cube_h.shape[0] * 6 == cube_h.shape[1]
+def cube_h2dice(cube_h: NDArray) -> NDArray:
+    if cube_h.shape[0] * 6 != cube_h.shape[1]:
+        raise ValueError("Cubemap's width must by 6x its height.")
     w = cube_h.shape[0]
     cube_dice = np.zeros((w * 3, w * 4, cube_h.shape[2]), dtype=cube_h.dtype)
     cube_list = cube_h2list(cube_h)
@@ -210,9 +221,12 @@ def cube_h2dice(cube_h):
     return cube_dice
 
 
-def cube_dice2h(cube_dice):
+def cube_dice2h(cube_dice: NDArray) -> NDArray:
     w = cube_dice.shape[0] // 3
-    assert cube_dice.shape[0] == w * 3 and cube_dice.shape[1] == w * 4
+    if cube_dice.shape[0] % 3 != 0:
+        raise ValueError("Dice image height must be a multiple of 3.")
+    if cube_dice.shape[1] != w * 4:
+        raise ValueError(f'Dice width must be 4 "faces" (4x{w}={4*w}) wide.')
     cube_h = np.zeros((w, w * 6, cube_dice.shape[2]), dtype=cube_dice.dtype)
     # Order: F R B L U D
     sxy = [(1, 1), (2, 1), (3, 1), (0, 1), (1, 0), (1, 2)]
@@ -228,7 +242,8 @@ def cube_dice2h(cube_dice):
 
 def rotation_matrix(rad, ax):
     ax = np.array(ax)
-    assert len(ax.shape) == 1 and ax.shape[0] == 3
+    if ax.shape != (3,):
+        raise ValueError(f"ax must be shape (3,); got {ax.shape}")
     ax = ax / np.sqrt((ax**2).sum())
     R = np.diag([np.cos(rad)] * 3)
     R = R + np.outer(ax, ax) * (1.0 - np.cos(rad))

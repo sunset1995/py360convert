@@ -25,7 +25,7 @@ def c2e(cubemap, h, w, mode="bilinear", cube_format="dice"):
     if cubemap.ndim != 3:
         raise ValueError(f"Cubemap must have 3 dimensions; got {cubemap.ndim}.")
     if cubemap.shape[0] * 6 != cubemap.shape[1]:
-        raise ValueError("Cubemap's width must by 6x it's height.")
+        raise ValueError("Cubemap's width must by 6x its height.")
     if w % 8 != 0:
         raise ValueError("w must be a multiple of 8.")
     face_w = cubemap.shape[0]
