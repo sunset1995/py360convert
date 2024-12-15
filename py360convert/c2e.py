@@ -1,9 +1,78 @@
+from typing import Literal, Union, overload
+
 import numpy as np
+from numpy.typing import NDArray
 
 from . import utils
+from .utils import (
+    CubeFormat,
+    DType,
+    InterpolationMode,
+    cube_dice2h,
+    cube_dict2h,
+    cube_list2h,
+    equirect_facetype,
+    equirect_uvgrid,
+    sample_cubefaces,
+)
 
 
-def c2e(cubemap, h, w, mode="bilinear", cube_format="dice"):
+@overload
+def c2e(
+    cubemap: NDArray[DType],
+    h: int,
+    w: int,
+    mode: InterpolationMode,
+    cube_format: Literal["horizon", "dice"],
+) -> NDArray[DType]: ...
+
+
+@overload
+def c2e(
+    cubemap: list[NDArray[DType]],
+    h: int,
+    w: int,
+    mode: InterpolationMode,
+    cube_format: Literal["list"],
+) -> NDArray[DType]: ...
+
+
+@overload
+def c2e(
+    cubemap: dict[str, NDArray[DType]],
+    h: int,
+    w: int,
+    mode: InterpolationMode,
+    cube_format: Literal["dict"],
+) -> NDArray[DType]: ...
+
+
+def c2e(
+    cubemap: Union[NDArray[DType], list[NDArray[DType]], dict[str, NDArray[DType]]],
+    h: int,
+    w: int,
+    mode: InterpolationMode = "bilinear",
+    cube_format: CubeFormat = "dice",
+) -> NDArray:
+    """Convert the cubemap to equirectangular.
+
+    Parameters
+    ----------
+    cubemap: Union[NDArray, list[NDArray], dict[str, NDArray]]
+    h: int
+        Output equirectangular height.
+    w: int
+        Output equirectangular width.
+    mode: Literal["bilinear", "nearest"]
+        Interpolation mode.
+    cube_format: Literal["horizon", "list", "dict", "dice"]
+        Format of input cubemap.
+
+    Returns
+    -------
+    np.ndarray
+        Equirectangular image.
+    """
     if mode == "bilinear":
         order = 1
     elif mode == "nearest":
@@ -12,13 +81,20 @@ def c2e(cubemap, h, w, mode="bilinear", cube_format="dice"):
         raise ValueError(f'Unknown mode "{mode}".')
 
     if cube_format == "horizon":
-        pass
+        if not isinstance(cubemap, np.ndarray):
+            raise TypeError('cubemap must be a numpy array for cube_format="horizon"')
     elif cube_format == "list":
-        cubemap = utils.cube_list2h(cubemap)
+        if not isinstance(cubemap, list):
+            raise TypeError('cubemap must be a list for cube_format="list"')
+        cubemap = cube_list2h(cubemap)
     elif cube_format == "dict":
-        cubemap = utils.cube_dict2h(cubemap)
+        if not isinstance(cubemap, dict):
+            raise TypeError('cubemap must be a dict for cube_format="dict"')
+        cubemap = cube_dict2h(cubemap)
     elif cube_format == "dice":
-        cubemap = utils.cube_dice2h(cubemap)
+        if not isinstance(cubemap, np.ndarray):
+            raise TypeError('cubemap must be a numpy array for cube_format="dice"')
+        cubemap = cube_dice2h(cubemap)
     else:
         raise ValueError('Unknown cube_format "{cube_format}".')
 
@@ -30,14 +106,14 @@ def c2e(cubemap, h, w, mode="bilinear", cube_format="dice"):
         raise ValueError("w must be a multiple of 8.")
     face_w = cubemap.shape[0]
 
-    uv = utils.equirect_uvgrid(h, w)
+    uv = equirect_uvgrid(h, w)
     u, v = np.split(uv, 2, axis=-1)
     u = u[..., 0]
     v = v[..., 0]
     cube_faces = np.stack(np.split(cubemap, 6, 1), 0)
 
     # Get face id to each pixel: 0F 1R 2B 3L 4U 5D
-    tp = utils.equirect_facetype(h, w)
+    tp = equirect_facetype(h, w)
     coor_x = np.zeros((h, w))
     coor_y = np.zeros((h, w))
 
@@ -61,10 +137,7 @@ def c2e(cubemap, h, w, mode="bilinear", cube_format="dice"):
     coor_y = (np.clip(coor_y, -0.5, 0.5) + 0.5) * face_w
 
     equirec = np.stack(
-        [
-            utils.sample_cubefaces(cube_faces[..., i], tp, coor_y, coor_x, order=order)
-            for i in range(cube_faces.shape[3])
-        ],
+        [sample_cubefaces(cube_faces[..., i], tp, coor_y, coor_x, order=order) for i in range(cube_faces.shape[3])],
         axis=-1,
     )
 

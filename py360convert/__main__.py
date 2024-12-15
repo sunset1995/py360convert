@@ -34,9 +34,9 @@ def main():
 
     # Convert
     if args.convert == "c2e":
-        out = py360convert.c2e(img, h=args.h, w=args.w, mode=args.mode)
+        out = py360convert.c2e(img, h=args.h, w=args.w, mode=args.mode)  # pyright: ignore[reportCallIssue]
     elif args.convert == "e2c":
-        out = py360convert.e2c(img, face_w=args.w, mode=args.mode)
+        out = py360convert.e2c(img, face_w=args.w, mode=args.mode)  # pyright: ignore[reportCallIssue]
     elif args.convert == "e2p":
         out = py360convert.e2p(
             img,
