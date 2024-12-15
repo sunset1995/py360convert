@@ -1,0 +1,99 @@
+# Regular tests
+#
+# Use this to ensure your tests are passing on every push and PR (skipped on
+# pushes which only affect documentation).
+#
+# You should make sure you run jobs on at least the *oldest* and the *newest*
+# versions of python that your codebase is intended to support.
+
+name: tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  test:
+    timeout-minutes: 10
+    defaults:
+      run:
+        shell: bash
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-13, windows-latest]
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+    env:
+      OS: ${{ matrix.os }}
+      PYTHON: ${{ matrix.python-version }}
+      POETRY_HOME: "~/poetry"
+
+    steps:
+      - name: Set OS Environment Variables (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          echo 'ACTIVATE_PYTHON_VENV=.venv/scripts/activate' >> $GITHUB_ENV
+
+      - name: Set OS Environment Variables (not Windows)
+        if: runner.os != 'Windows'
+        run: |
+          echo 'ACTIVATE_PYTHON_VENV=.venv/bin/activate' >> $GITHUB_ENV
+
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up python ${{ matrix.python-version }}
+        id: setup-python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache Poetry Install
+        uses: actions/cache@v4
+        id: cached-poetry
+        with:
+          path: ${{ env.POETRY_HOME }}
+          key: poetry-cache-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('.github/workflows/tests.yaml') }}
+
+      - name: Install poetry
+        uses: snok/install-poetry@v1
+        if: steps.cached-poetry.outputs.cache-hit != 'true'
+
+      - name: Add Poetry to PATH # Needs to be separate from install-poetry because cache.
+        run: |
+          echo "$POETRY_HOME/bin" >> $GITHUB_PATH
+
+      - name: Configure Poetry # Needs to be separate from install-poetry because cache.
+        run: |
+          poetry config virtualenvs.create true
+          poetry config virtualenvs.in-project true
+          poetry config installer.parallel ${{ runner.os != 'Windows' }} # Currently there seems to be some race-condition in windows
+
+      - name: Cache venv
+        uses: actions/cache@v4
+        id: cached-venv
+        with:
+          path: .venv/
+          key: venv-cache-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('.github/workflows/tests.yaml') }}
+
+      - name: Install library
+        run: poetry install --no-interaction
+
+      - name: Cache pre-commit
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pre-commit/
+          key: pre-commit-${{ runner.os }}-${{ env.pythonLocation }}-${{ hashFiles('.pre-commit-config.yaml') }}
+
+      - name: Pre-commit run
+        run: |
+          source ${{ env.ACTIVATE_PYTHON_VENV }}
+          pre-commit run --show-diff-on-failure --color=always --all-files
+
+      - name: Run tests
+        run: |
+          source ${{ env.ACTIVATE_PYTHON_VENV }}
+          python -m pytest
