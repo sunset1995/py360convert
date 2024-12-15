@@ -8,7 +8,8 @@ def e2c(e_img, face_w=256, mode="bilinear", cube_format="dice"):
     e_img:  ndarray in shape of [H, W, *]
     face_w: int, the length of each face of the cubemap
     """
-    assert len(e_img.shape) == 3
+    if e_img.ndim != 3:
+        raise ValueError("e_img must have 3 dimensions.")
     h, w = e_img.shape[:2]
     if mode == "bilinear":
         order = 1

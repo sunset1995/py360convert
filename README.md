@@ -2,9 +2,9 @@
 
 Features of this project:
 - Conversion between cubemap and equirectangular  
-    ![](assert/teaser_convertion.png)
+    ![](assets/teaser_convertion.png)
 - Equirectangular to planar  
-    ![](assert/teaser_2planar.png)
+    ![](assets/teaser_2planar.png)
 - Pure python implementation and depend only on [numpy](http://www.numpy.org/) and [scipy](https://www.scipy.org/)
 - Vectorization implementation (in most of the place)
     - `c2e` takes 300ms and `e2c` takes 160ms on 1.6 GHz Intel Core i5 CPU
@@ -19,31 +19,31 @@ Now at everywhere, you can `import py360convert` or use the command line tool `c
 You can run command line tool to use the functionality. Please See `convert360 -h` for detailed. The python script is also an example code to see how to use this as a package in your code.
 
 ```
-convert360 --convert e2c --i assert/example_input.png --o assert/example_e2c.png --w 200
+convert360 --convert e2c --i assets/example_input.png --o assets/example_e2c.png --w 200
 ```
 | Input Equirectangular | Output Cubemap |
 | :---: | :----: |
-| ![](assert/example_input.png) | ![](assert/example_e2c.png) |
+| ![](assets/example_input.png) | ![](assets/example_e2c.png) |
 
 -----
 
 ```
-convert360 --convert c2e --i assert/example_e2c.png --o assert/example_c2e.png --w 800 --h 400
+convert360 --convert c2e --i assets/example_e2c.png --o assets/example_c2e.png --w 800 --h 400
 ```
 | Input Cubemap | Output Equirectangular |
 | :---: | :----: |
-| ![](assert/example_e2c.png) | ![](assert/example_c2e.png) |
+| ![](assets/example_e2c.png) | ![](assets/example_c2e.png) |
 
 You can see the blurring artifacts in the polar region because the equirectangular in above figure are resampled twice (`e2c` then `c2e`).
 
 ----
 
 ```
-convert360 --convert e2p --i assert/example_input.png --o assert/example_e2p.png --w 300 --h 300 --u_deg 120 --v_deg 23
+convert360 --convert e2p --i assets/example_input.png --o assets/example_e2p.png --w 300 --h 300 --u_deg 120 --v_deg 23
 ```
 | Input Equirectangular | Output Perspective |
 | :---: | :----: |
-| ![](assert/example_input.png) | ![](assert/example_e2p.png) |
+| ![](assets/example_input.png) | ![](assets/example_e2p.png) |
 
 
 ## Doc
@@ -78,9 +78,9 @@ Convert the given cubemap to equirectangular.
 - `cube_format`: 'dice' (default) or 'horizon' or 'dict' or 'list'. Telling the format of the given `cubemap`.
     - Say that each face of the cube is in shape of `256 (width) x 256 (height)`
     - 'dice': a numpy array in shape of `1024 x 768` like below example
-        <img src="assert/cube_dice.png" height="200">
+        <img src="assets/cube_dice.png" height="200">
     - 'horizon': a numpy array in shape of `1536 x 256` like below example
-        <img src="assert/cube_horizon.png" height="100">
+        <img src="assets/cube_horizon.png" height="100">
     - 'list': a `list` with 6 elements each of which is a numpy array in shape of `256 x 256`. It's just converted from 'horizon' format with one line of code: `np.split(cube_h, 6, axis=1)`.
     - 'dict': a `dict` with 6 elements with keys `'F', 'R', 'B', 'L', 'U', 'D'` each of which is a numpy array in shape of `256 x 256`.
     - Please refer to [the source code](https://github.com/sunset1995/py360convert/blob/master/py360convert/utils.py#L176) if you still have question about the conversion between formats.
@@ -91,7 +91,7 @@ import numpy as np
 from PIL import Image
 import py360convert
 
-cube_dice = np.array(Image.open('assert/demo_cube.png'))
+cube_dice = np.array(Image.open('assets/demo_cube.png'))
 
 # You can make conversion between supported cubemap format
 cube_h = py360convert.cube_dice2h(cube_dice)  # the inverse is cube_h2dice

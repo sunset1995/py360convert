@@ -10,7 +10,8 @@ def e2p(e_img, fov_deg, u_deg, v_deg, out_hw, in_rot_deg=0, mode="bilinear"):
     u_deg:   horizon viewing angle in range [-180, 180]
     v_deg:   vertical viewing angle in range [-90, 90]
     """
-    assert len(e_img.shape) == 3
+    if e_img.ndim != 3:
+        raise ValueError("e_img must have 3 dimensions.")
     h, w = e_img.shape[:2]
 
     try:
