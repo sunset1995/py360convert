@@ -22,7 +22,7 @@ packages = [{include = "py360convert"}]
 generate-setup-file = false
 
 [tool.poetry.scripts]
-convert360 = "pythontemplate.cli.main:run_app"
+convert360 = "py360convert.__main__:main"
 
 [tool.poetry.dependencies]
 # Be as loose as possible if writing a library.
