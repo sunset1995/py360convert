@@ -1,0 +1,145 @@
+[build-system]
+requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning>=1.0.1"]
+build-backend = "poetry_dynamic_versioning.backend"
+
+[tool.poetry-dynamic-versioning]
+enable = true
+vcs = "git"
+style = "semver"
+
+[tool.poetry]
+name = "py360convert"
+version = "0.0.0"  # Do not change, let poetry-dynamic-versioning handle it.
+homepage = "https://github.com/sunset1995/py360convert"
+repository = "https://github.com/sunset1995/py360convert"
+license = "MIT"
+description='Convertion between cubemap and equirectangular and also to perspective planar.'
+authors = ["Cheng Sun", "Brian Pugh"]
+readme = "README.md"
+packages = [{include = "py360convert"}]
+
+[tool.poetry.build]
+generate-setup-file = false
+
+[tool.poetry.scripts]
+convert360 = "pythontemplate.cli.main:run_app"
+
+[tool.poetry.dependencies]
+# Be as loose as possible if writing a library.
+python = "^3.9"
+numpy = ">=1.16.0"
+scipy = ">=1.2.0"
+pillow = ">=6.0.0"
+
+[tool.poetry.group.dev.dependencies]
+pre_commit = ">=2.16.0"
+pytest = ">=7.1.2"
+pytest-mock = ">=3.7.0"
+
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
+extraPaths = ["tests/"]
+
+[tool.ruff]
+target-version = 'py39'
+
+exclude = [
+    "migrations",
+    "__pycache__",
+    "manage.py",
+    "settings.py",
+    "env",
+    ".env",
+    "venv",
+    ".venv",
+]
+
+line-length = 120
+
+[tool.ruff.format]
+docstring-code-format = true
+
+[tool.ruff.lint]
+select = [
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "D",  # pydocstyle
+    "E",  # Error
+    "F",  # pyflakes
+    "I",  # isort
+    "N",  # pep8-naming
+    "PGH",  # pygrep-hooks
+    "PTH", # flake8-use-pathlib
+    "Q",  # flake8-quotes
+    "S",  # bandit
+    "SIM",  # flake8-simplify
+    "TRY",  # tryceratops
+    "UP",  # pyupgrade
+    "W",  # Warning
+    "YTT", # flake8-2020
+]
+
+ignore = [
+    "B905",  # zip strict=True; remove once python <3.10 support is dropped.
+    "D100",
+    "D101",
+    "D102",
+    "D103",
+    "D104",
+    "D105",
+    "D106",
+    "D107",
+    "D200",
+    "D401",
+    "E402",
+    "E501",
+    "F401",
+    "N806",
+    "TRY003",  # Avoid specifying messages outside exception class; overly strict, especially for ValueError
+]
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = [
+    "chr",
+    "typer.Argument",
+    "typer.Option",
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*.py" = [
+    "D100",
+    "D101",
+    "D102",
+    "D103",
+    "D104",
+    "D105",
+    "D106",
+    "D107",
+    "S101",  # use of "assert"
+    "S102",  # use of "exec"
+    "S106",  # possible hardcoded password.
+    "PGH001",  # use of "eval"
+]
+
+[tool.ruff.lint.pep8-naming]
+staticmethod-decorators = [
+    "pydantic.validator",
+    "pydantic.root_validator",
+]
+
+[tool.codespell]
+skip = 'poetry.lock,'
+
+[tool.creosote]
+venvs=[".venv"]
+paths=["py360convert"]
+deps-file="pyproject.toml"
+sections=["tool.poetry.dependencies"]
+exclude-deps =[
+  "rich",
+  "typing-extensions",
+]

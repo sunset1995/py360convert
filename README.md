@@ -1,20 +1,13 @@
 # py360convert
 
-**A new library including more fuctionality for 360 is under contruction by my colleague. This repo will be depreciated then.**
-
 Features of this project:
-- Convertion between cubemap and equirectangular  
+- Conversion between cubemap and equirectangular  
     ![](assert/teaser_convertion.png)
 - Equirectangular to planar  
     ![](assert/teaser_2planar.png)
 - Pure python implementation and depend only on [numpy](http://www.numpy.org/) and [scipy](https://www.scipy.org/)
 - Vectorization implementation (in most of the place)
     - `c2e` takes 300ms and `e2c` takes 160ms on 1.6 GHz Intel Core i5 CPU
-
-## Requirements
-- numpy
-- scipy
-- pillow (for example code to load/save image)
 
 ## Install
 ```
@@ -61,7 +54,7 @@ Convert the given equirectangular to cubemap.
 - `e_img`: Numpy array with shape [H, W, C].
 - `face_w`: The width of each cube face.
 - `mode`: `bilinear` or `nearest`.
-- `cube_format`: See `c2e` explaination.
+- `cube_format`: See `c2e` explanation.
 
 
 #### `e2p(e_img, fov_deg, u_deg, v_deg, out_hw, in_rot_deg=0, mode='bilinear')`
@@ -100,7 +93,7 @@ import py360convert
 
 cube_dice = np.array(Image.open('assert/demo_cube.png'))
 
-# You can make convertion between supported cubemap format
+# You can make conversion between supported cubemap format
 cube_h = py360convert.cube_dice2h(cube_dice)  # the inverse is cube_h2dice
 cube_dict = py360convert.cube_h2dict(cube_h)  # the inverse is cube_dict2h
 cube_list = py360convert.cube_h2list(cube_h)  # the inverse is cube_list2h
