@@ -20,8 +20,9 @@ from .utils import (
 @overload
 def e2c(
     e_img: NDArray[DType],
-    face_w: int,
-    mode: InterpolationMode,
+    *,
+    face_w: int = 256,
+    mode: InterpolationMode = "bilinear",
     cube_format: Literal["horizon", "dice"],
 ) -> NDArray[DType]: ...
 
@@ -29,8 +30,9 @@ def e2c(
 @overload
 def e2c(
     e_img: NDArray[DType],
-    face_w: int,
-    mode: InterpolationMode,
+    *,
+    face_w: int = 256,
+    mode: InterpolationMode = "bilinear",
     cube_format: Literal["list"],
 ) -> list[NDArray[DType]]: ...
 
@@ -38,8 +40,9 @@ def e2c(
 @overload
 def e2c(
     e_img: NDArray[DType],
-    face_w: int,
-    mode: InterpolationMode,
+    *,
+    face_w: int = 256,
+    mode: InterpolationMode = "bilinear",
     cube_format: Literal["dict"],
 ) -> dict[str, NDArray[DType]]: ...
 

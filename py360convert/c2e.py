@@ -3,7 +3,6 @@ from typing import Literal, Union, overload
 import numpy as np
 from numpy.typing import NDArray
 
-from . import utils
 from .utils import (
     CubeFormat,
     DType,
@@ -22,8 +21,8 @@ def c2e(
     cubemap: NDArray[DType],
     h: int,
     w: int,
-    mode: InterpolationMode,
-    cube_format: Literal["horizon", "dice"],
+    mode: InterpolationMode = "bilinear",
+    cube_format: Literal["horizon", "dice"] = "dice",
 ) -> NDArray[DType]: ...
 
 
@@ -32,8 +31,8 @@ def c2e(
     cubemap: list[NDArray[DType]],
     h: int,
     w: int,
-    mode: InterpolationMode,
-    cube_format: Literal["list"],
+    mode: InterpolationMode = "bilinear",
+    cube_format: Literal["list"] = "list",
 ) -> NDArray[DType]: ...
 
 
@@ -42,8 +41,8 @@ def c2e(
     cubemap: dict[str, NDArray[DType]],
     h: int,
     w: int,
-    mode: InterpolationMode,
-    cube_format: Literal["dict"],
+    mode: InterpolationMode = "bilinear",
+    cube_format: Literal["dict"] = "dict",
 ) -> NDArray[DType]: ...
 
 
