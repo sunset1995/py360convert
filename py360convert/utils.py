@@ -7,7 +7,7 @@ from scipy.ndimage import map_coordinates
 
 CubeFormat = Literal["horizon", "list", "dict", "dice"]
 InterpolationMode = Literal["bilinear", "nearest"]
-DType = TypeVar("DType", bound=np.generic)
+DType = TypeVar("DType", bound=np.generic, covariant=True)
 
 
 def xyzcube(face_w: int) -> NDArray[np.float32]:
@@ -92,7 +92,7 @@ def equirect_facetype(h: int, w: int) -> NDArray[np.int32]:
     # Prepare ceil mask
     mask = np.zeros((h, w // 4), np.bool_)
     idx = np.linspace(-np.pi, np.pi, w // 4) / 4
-    idx = h // 2 - np.round(np.arctan(np.cos(idx)) * h / np.pi).astype(int)
+    idx = (h // 2 - np.round(np.arctan(np.cos(idx)) * h / np.pi)).astype(int)
     for i, j in enumerate(idx):
         mask[:j, i] = 1
     mask = np.roll(np.concatenate([mask] * 4, 1), 3 * w // 8, 1)

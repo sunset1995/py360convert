@@ -18,32 +18,29 @@ from .utils import (
 
 
 @overload
-def e2c(
+def e2c(  # pyright: ignore[reportOverlappingOverload]
     e_img: NDArray[DType],
-    *,
     face_w: int = 256,
     mode: InterpolationMode = "bilinear",
-    cube_format: Literal["horizon", "dice"],
+    cube_format: Literal["horizon", "dice"] = "dice",
 ) -> NDArray[DType]: ...
 
 
 @overload
 def e2c(
     e_img: NDArray[DType],
-    *,
     face_w: int = 256,
     mode: InterpolationMode = "bilinear",
-    cube_format: Literal["list"],
+    cube_format: Literal["list"] = "list",
 ) -> list[NDArray[DType]]: ...
 
 
 @overload
 def e2c(
     e_img: NDArray[DType],
-    *,
     face_w: int = 256,
     mode: InterpolationMode = "bilinear",
-    cube_format: Literal["dict"],
+    cube_format: Literal["dict"] = "dict",
 ) -> dict[str, NDArray[DType]]: ...
 
 
