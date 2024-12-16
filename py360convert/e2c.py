@@ -10,6 +10,7 @@ from .utils import (
     cube_h2dice,
     cube_h2dict,
     cube_h2list,
+    mode_to_order,
     sample_equirec,
     uv2coor,
     xyz2uv,
@@ -77,12 +78,7 @@ def e2c(
         squeeze = False
 
     h, w = e_img.shape[:2]
-    if mode == "bilinear":
-        order = 1
-    elif mode == "nearest":
-        order = 0
-    else:
-        raise ValueError(f'Unknown mode: "{mode}".')
+    order = mode_to_order(mode)
 
     xyz = xyzcube(face_w)
     uv = xyz2uv(xyz)

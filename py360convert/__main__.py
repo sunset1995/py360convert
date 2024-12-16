@@ -1,11 +1,13 @@
 import argparse
 import sys
 from pathlib import Path
+from typing import get_args
 
 import numpy as np
 from PIL import Image
 
 import py360convert
+from py360convert.utils import InterpolationMode
 
 
 def _assert_height_width(args):
@@ -46,7 +48,7 @@ def main():
     c2e_parser.add_argument("--height", "-h", type=int, required=True, help="Output image height in pixels.")
     c2e_parser.add_argument("--width", "-w", type=int, required=True, help="Output image width in pixels.")
     c2e_parser.add_argument(
-        "--mode", "-m", default="bilinear", choices=["bilinear", "nearest"], help="Resampling method."
+        "--mode", "-m", default="bilinear", choices=get_args(InterpolationMode), help="Resampling method."
     )
 
     e2c_parser = subparsers.add_parser("e2c", help="Convert equirectangular to cubemap.", add_help=False)
@@ -58,7 +60,7 @@ def main():
     e2c_parser.add_argument("--width", "-w", type=int, help="Output image width in pixels.")
     e2c_parser.add_argument("--size", "-s", type=int, help="Side length of each cube face. Overrides height/width.")
     e2c_parser.add_argument(
-        "--mode", "-m", default="bilinear", choices=["bilinear", "nearest"], help="Resampling method."
+        "--mode", "-m", default="bilinear", choices=get_args(InterpolationMode), help="Resampling method."
     )
 
     e2p_parser = subparsers.add_parser("e2p", help="Convert equirectangular to perspective.", add_help=False)
@@ -88,7 +90,7 @@ def main():
         help="Roll camera degrees. Positive values rotate counterclockwise; negative values rotate clockwise.",
     )
     e2p_parser.add_argument(
-        "--mode", "-m", default="bilinear", choices=["bilinear", "nearest"], help="Resampling method."
+        "--mode", "-m", default="bilinear", choices=get_args(InterpolationMode), help="Resampling method."
     )
 
     args = parser.parse_args()

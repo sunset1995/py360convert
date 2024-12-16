@@ -12,6 +12,7 @@ from .utils import (
     cube_list2h,
     equirect_facetype,
     equirect_uvgrid,
+    mode_to_order,
     sample_cubefaces,
 )
 
@@ -72,12 +73,7 @@ def c2e(
     np.ndarray
         Equirectangular image.
     """
-    if mode == "bilinear":
-        order = 1
-    elif mode == "nearest":
-        order = 0
-    else:
-        raise ValueError(f'Unknown mode "{mode}".')
+    order = mode_to_order(mode)
 
     if cube_format == "horizon":
         if not isinstance(cubemap, np.ndarray):

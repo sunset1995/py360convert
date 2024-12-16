@@ -7,6 +7,7 @@ from numpy.typing import NDArray
 from .utils import (
     DType,
     InterpolationMode,
+    mode_to_order,
     sample_equirec,
     uv2coor,
     xyz2uv,
@@ -64,12 +65,7 @@ def e2p(
 
     in_rot = np.deg2rad(in_rot_deg)
 
-    if mode == "bilinear":
-        order = 1
-    elif mode == "nearest":
-        order = 0
-    else:
-        raise ValueError(f'Unknown mode: "{mode}".')
+    order = mode_to_order(mode)
 
     u = -u_deg * np.pi / 180
     v = v_deg * np.pi / 180

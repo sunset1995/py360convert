@@ -5,9 +5,55 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy.ndimage import map_coordinates
 
+_mode_to_order = {
+    "nearest": 0,
+    "linear": 1,
+    "bilinear": 1,
+    "biquadratic": 2,
+    "quadratic": 2,
+    "quad": 2,
+    "bicubic": 3,
+    "cubic": 3,
+    "biquartic": 4,
+    "quartic": 4,
+    "biquintic": 5,
+    "quintic": 5,
+}
+
 CubeFormat = Literal["horizon", "list", "dict", "dice"]
-InterpolationMode = Literal["bilinear", "nearest"]
+InterpolationMode = Literal[
+    "nearest",
+    "linear",
+    "bilinear",
+    "biquadratic",
+    "quadratic",
+    "quad",
+    "bicubic",
+    "cubic",
+    "biquartic",
+    "quartic",
+    "biquintic",
+    "quintic",
+]
 DType = TypeVar("DType", bound=np.generic, covariant=True)
+
+
+def mode_to_order(mode: InterpolationMode) -> int:
+    """Convert a human-friendly interpolation string to integer equivalent.
+
+    Parameters
+    ----------
+    mode: str
+        Human-friendly interpolation string.
+
+    Returns
+    -------
+    The order of the spline interpolation
+    """
+    try:
+        return _mode_to_order[mode.lower()]
+    except KeyError:
+        raise ValueError(f'Unknown mode "{mode}".') from None
 
 
 def xyzcube(face_w: int) -> NDArray[np.float32]:
