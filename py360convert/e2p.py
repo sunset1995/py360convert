@@ -62,7 +62,7 @@ def e2p(
     else:
         h_fov, v_fov = map(np.deg2rad, fov_deg)
 
-    in_rot = in_rot_deg * np.pi / 180
+    in_rot = np.deg2rad(in_rot_deg)
 
     if mode == "bilinear":
         order = 1

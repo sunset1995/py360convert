@@ -19,7 +19,7 @@ Now at everywhere, you can `import py360convert` or use the command line tool `c
 You can run command line tool to use the functionality. Please See `convert360 -h` for detailed. The python script is also an example code to see how to use this as a package in your code.
 
 ```
-convert360 --convert e2c --i assets/example_input.png --o assets/example_e2c.png --w 200
+convert360 e2c assets/example_input.png out.png --size 200
 ```
 | Input Equirectangular | Output Cubemap |
 | :---: | :----: |
@@ -28,7 +28,7 @@ convert360 --convert e2c --i assets/example_input.png --o assets/example_e2c.png
 -----
 
 ```
-convert360 --convert c2e --i assets/example_e2c.png --o assets/example_c2e.png --w 800 --h 400
+convert360 c2e assets/example_e2c.png out.png --width 800 --height 400
 ```
 | Input Cubemap | Output Equirectangular |
 | :---: | :----: |
@@ -39,7 +39,7 @@ You can see the blurring artifacts in the polar region because the equirectangul
 ----
 
 ```
-convert360 --convert e2p --i assets/example_input.png --o assets/example_e2p.png --w 300 --h 300 --u_deg 120 --v_deg 23
+convert360 e2p assets/example_input.png out.png --width 300 --height 300 --yaw 120 --pitch 23
 ```
 | Input Equirectangular | Output Perspective |
 | :---: | :----: |
@@ -48,14 +48,33 @@ convert360 --convert e2p --i assets/example_input.png --o assets/example_e2p.png
 
 ## Doc
 
+#### `c2e(cubemap, h, w, cube_format='dice')`
+Convert the given cubemap to equirectangular.  
+**Parameters**:
+- `cubemap`: Numpy array or list/dict of numpy array (depend on `cube_format`).
+- `h`: Output equirectangular height.
+- `w`: Output equirectangular width.
+- `mode:str`: Interpolation method; typically `bilinear` or `nearest`. Valid options: "nearest", "linear", "bilinear", "biquadratic", "quadratic", "quad", "bicubic", "cubic", "biquartic", "quartic", "biquintic", "quintic".
+
+- `cube_format`: Options: `'dice'` (default), `'horizon'` or `'dict'` or `'list'`. Indicates the format of the given `cubemap`.
+    - Say that each face of the cube is in shape of `256 (width) x 256 (height)`
+    - `'dice'`: a numpy array in shape of `1024 x 768` like below example
+
+      <img src="assets/cube_dice.png" height="200">
+    - `'horizon'`: a numpy array in shape of `1536 x 256` like below example
+
+      <img src="assets/cube_horizon.png" height="100">
+    - `'list'`: a `list` with 6 elements each of which is a numpy array in shape of `256 x 256`. It's just converted from 'horizon' format with one line of code: `np.split(cube_h, 6, axis=1)`.
+    - `'dict'`: a `dict` with 6 elements with keys `'F', 'R', 'B', 'L', 'U', 'D'` each of which is a numpy array in shape of `256 x 256`.
+    - Please refer to [the source code](https://github.com/sunset1995/py360convert/blob/master/py360convert/utils.py#L176) if you still have question about the conversion between formats.
+
 #### `e2c(e_img, face_w=256, mode='bilinear', cube_format='dice')`
 Convert the given equirectangular to cubemap.  
 **Parameters**:
-- `e_img`: Numpy array with shape [H, W, C].
-- `face_w`: The width of each cube face.
-- `mode`: `bilinear` or `nearest`.
-- `cube_format`: See `c2e` explanation.
-
+- `e_img: NDArray`: Numpy array with shape [H, W, C].
+- `face_w: int`: The width of each cube face.
+- `mode:str`: See `c2e`.
+- `cube_format:str`: See `c2e`.
 
 #### `e2p(e_img, fov_deg, u_deg, v_deg, out_hw, in_rot_deg=0, mode='bilinear')`
 Take perspective image from given equirectangular.
@@ -68,24 +87,6 @@ Take perspective image from given equirectangular.
 - `in_rot_deg`: Inplane rotation.
 - `mode`: `bilinear` or `nearest`.
 
-
-#### `c2e(cubemap, h, w, cube_format='dice')`
-Convert the given cubemap to equirectangular.  
-**Parameters**:
-- `cubemap`: Numpy array or list/dict of numpy array (depend on `cube_format`).
-- `h`: Output equirectangular height.
-- `w`: Output equirectangular width.
-- `cube_format`: 'dice' (default) or 'horizon' or 'dict' or 'list'. Telling the format of the given `cubemap`.
-    - Say that each face of the cube is in shape of `256 (width) x 256 (height)`
-    - 'dice': a numpy array in shape of `1024 x 768` like below example
-
-      <img src="assets/cube_dice.png" height="200">
-    - 'horizon': a numpy array in shape of `1536 x 256` like below example
-
-      <img src="assets/cube_horizon.png" height="100">
-    - 'list': a `list` with 6 elements each of which is a numpy array in shape of `256 x 256`. It's just converted from 'horizon' format with one line of code: `np.split(cube_h, 6, axis=1)`.
-    - 'dict': a `dict` with 6 elements with keys `'F', 'R', 'B', 'L', 'U', 'D'` each of which is a numpy array in shape of `256 x 256`.
-    - Please refer to [the source code](https://github.com/sunset1995/py360convert/blob/master/py360convert/utils.py#L176) if you still have question about the conversion between formats.
 
 **Example**:
 ```python
