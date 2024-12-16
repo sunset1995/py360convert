@@ -13,10 +13,11 @@ Features of this project:
 ```
 pip install py360convert
 ```
-Now at everywhere, you can `import py360convert` or use the command line tool `convert360`.
+
+You can use the library with `import py360convert` and through the command line tool `convert360`.
 
 ### Command line examples
-You can run command line tool to use the functionality. Please See `convert360 -h` for detailed. The python script is also an example code to see how to use this as a package in your code.
+The convert360 command line tool can be run like so. Use `convert360 -h` for details. The convert360 python script is also doubles as ab example code for how to use this as a package in your code.
 
 ```
 convert360 e2c assets/example_input.png out.png --size 200
@@ -64,9 +65,9 @@ Convert the given cubemap to equirectangular.
     - `'horizon'`: a numpy array in shape of `1536 x 256` like below example
 
       <img src="assets/cube_horizon.png" height="100">
-    - `'list'`: a `list` with 6 elements each of which is a numpy array in shape of `256 x 256`. It's just converted from 'horizon' format with one line of code: `np.split(cube_h, 6, axis=1)`.
+    - `'list'`: a `list` with 6 elements each of which is a numpy array in the shape of `256 x 256`. It's just converted from 'horizon' format with one line of code: `np.split(cube_h, 6, axis=1)`.
     - `'dict'`: a `dict` with 6 elements with keys `'F', 'R', 'B', 'L', 'U', 'D'` each of which is a numpy array in shape of `256 x 256`.
-    - Please refer to [the source code](https://github.com/sunset1995/py360convert/blob/master/py360convert/utils.py#L176) if you still have question about the conversion between formats.
+    - Please refer to [the source code](https://github.com/sunset1995/py360convert/blob/master/py360convert/utils.py#L176) if you still have any questions about the conversion between formats.
 
 #### `e2c(e_img, face_w=256, mode='bilinear', cube_format='dice')`
 Convert the given equirectangular to cubemap.  
