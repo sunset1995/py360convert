@@ -38,10 +38,11 @@ def xyzcube(face_w: int) -> NDArray[np.float32]:
 
     # Right face (x = 0.5)
     out[:, 1 * face_w : 2 * face_w, [2, 1]] = grid
+    out[:, 1 * face_w : 2 * face_w, [2, 1]] = np.flip(grid, axis=1)
     out[:, 1 * face_w : 2 * face_w, 0] = 0.5
 
     # Back face (z = -0.5)
-    out[:, 2 * face_w : 3 * face_w, [0, 1]] = grid
+    out[:, 2 * face_w : 3 * face_w, [0, 1]] = np.flip(grid, axis=1)
     out[:, 2 * face_w : 3 * face_w, 2] = -0.5
 
     # Left face (x = -0.5)
@@ -49,7 +50,7 @@ def xyzcube(face_w: int) -> NDArray[np.float32]:
     out[:, 3 * face_w : 4 * face_w, 0] = -0.5
 
     # Up face (y = 0.5)
-    out[:, 4 * face_w : 5 * face_w, [0, 2]] = grid
+    out[:, 4 * face_w : 5 * face_w, [0, 2]] = np.flip(grid, axis=0)
     out[:, 4 * face_w : 5 * face_w, 1] = 0.5
 
     # Down face (y = -0.5)
@@ -213,9 +214,9 @@ def sample_cubefaces(
     cube_faces: NDArray[DType], tp: NDArray, coor_y: NDArray, coor_x: NDArray, order: int
 ) -> NDArray[DType]:
     cube_faces = cube_faces.copy()
-    cube_faces[1] = np.flip(cube_faces[1], 1)
-    cube_faces[2] = np.flip(cube_faces[2], 1)
-    cube_faces[4] = np.flip(cube_faces[4], 0)
+    # cube_faces[1] = np.flip(cube_faces[1], 1)
+    # cube_faces[2] = np.flip(cube_faces[2], 1)
+    # cube_faces[4] = np.flip(cube_faces[4], 0)
 
     # Pad up down
     pad_ud = np.zeros((6, 2, cube_faces.shape[2]), dtype=cube_faces.dtype)
@@ -297,10 +298,6 @@ def cube_h2dice(cube_h: NDArray[DType]) -> NDArray[DType]:
     sxy = [(1, 1), (2, 1), (3, 1), (0, 1), (1, 0), (1, 2)]
     for i, (sx, sy) in enumerate(sxy):
         face = cube_list[i]
-        if i in [1, 2]:
-            face = np.flip(face, axis=1)
-        if i == 4:
-            face = np.flip(face, axis=0)
         cube_dice[sy * w : (sy + 1) * w, sx * w : (sx + 1) * w] = face
     return cube_dice
 
@@ -316,10 +313,6 @@ def cube_dice2h(cube_dice: NDArray[DType]) -> NDArray[DType]:
     sxy = [(1, 1), (2, 1), (3, 1), (0, 1), (1, 0), (1, 2)]
     for i, (sx, sy) in enumerate(sxy):
         face = cube_dice[sy * w : (sy + 1) * w, sx * w : (sx + 1) * w]
-        if i in [1, 2]:
-            face = np.flip(face, axis=1)
-        if i == 4:
-            face = np.flip(face, axis=0)
         cube_h[:, i * w : (i + 1) * w] = face
     return cube_h
 
