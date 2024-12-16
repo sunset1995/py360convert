@@ -82,29 +82,47 @@ def c2e(
     if cube_format == "horizon":
         if not isinstance(cubemap, np.ndarray):
             raise TypeError('cubemap must be a numpy array for cube_format="horizon"')
+        if cubemap.ndim == 2:
+            cubemap = cubemap[..., None]
+            squeeze = True
+        else:
+            squeeze = False
     elif cube_format == "list":
         if not isinstance(cubemap, list):
             raise TypeError('cubemap must be a list for cube_format="list"')
+        if len({x.shape for x in cubemap}) != 1:
+            raise ValueError("All cubemap elements must have same shape")
+        if cubemap[0].ndim == 2:
+            cubemap = [x[..., None] for x in cubemap]
+            squeeze = True
+        else:
+            squeeze = False
         cubemap = cube_list2h(cubemap)
     elif cube_format == "dict":
         if not isinstance(cubemap, dict):
             raise TypeError('cubemap must be a dict for cube_format="dict"')
+        if len({x.shape for x in cubemap.values()}) != 1:
+            raise ValueError("All cubemap elements must have same shape")
+        if cubemap["F"].ndim == 2:
+            cubemap = {k: v[..., None] for k, v in cubemap.items()}
+            squeeze = True
+        else:
+            squeeze = False
         cubemap = cube_dict2h(cubemap)
     elif cube_format == "dice":
         if not isinstance(cubemap, np.ndarray):
             raise TypeError('cubemap must be a numpy array for cube_format="dice"')
+        if cubemap.ndim == 2:
+            cubemap = cubemap[..., None]
+            squeeze = True
+        else:
+            squeeze = False
         cubemap = cube_dice2h(cubemap)
     else:
         raise ValueError('Unknown cube_format "{cube_format}".')
 
-    if cubemap.ndim not in (2, 3):
+    if cubemap.ndim != 3:
         raise ValueError(f"Cubemap must have 2 or 3 dimensions; got {cubemap.ndim}.")
-
-    if cubemap.ndim == 2:
-        cubemap = cubemap[..., None]
-        squeeze = True
-    else:
-        squeeze = False
 
     if cubemap.shape[0] * 6 != cubemap.shape[1]:
         raise ValueError("Cubemap's width must by 6x its height.")
