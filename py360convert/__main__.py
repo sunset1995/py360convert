@@ -42,6 +42,7 @@ def main():
     c2e_parser.add_argument("--help", action="help", help="Show this help message and exit")
     c2e_parser.add_argument("input", type=Path, help="Path to input image.")
     c2e_parser.add_argument("output", type=Path, help="Path to output image.")
+    c2e_parser.add_argument("--format", "-f", choices=["horizon", "dice"], default="dice", help="Input image layout.")
     c2e_parser.add_argument("--height", "-h", type=int, required=True, help="Output image height in pixels.")
     c2e_parser.add_argument("--width", "-w", type=int, required=True, help="Output image width in pixels.")
     c2e_parser.add_argument(
@@ -98,7 +99,7 @@ def main():
     elif args.command == "c2e":
         _assert_height_width(args)
         img = np.array(Image.open(args.input))
-        out = py360convert.c2e(img, h=args.height, w=args.width, mode=args.mode)  # pyright: ignore[reportCallIssue]
+        out = py360convert.c2e(img, h=args.height, w=args.width, mode=args.mode, cube_format=args.format)  # pyright: ignore[reportCallIssue]
         Image.fromarray(out).save(args.output)
     elif args.command == "e2c":
         _size_to_dims(args)
