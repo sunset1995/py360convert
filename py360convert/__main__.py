@@ -68,8 +68,24 @@ def main():
     e2p_parser.add_argument("--width", "-w", type=int, required=True, help="Output image width in pixels.")
     e2p_parser.add_argument("--h-fov", type=float, default=60, help="Horizontal FoV in degrees.")
     e2p_parser.add_argument("--v-fov", type=float, default=60, help="Vertical FoV in degrees.")
-    e2p_parser.add_argument("--h-view", type=float, default=0, help="Horizontal viewing angle in degrees.")
-    e2p_parser.add_argument("--v-view", type=float, default=0, help="Vertical viewing angle in degrees.")
+    e2p_parser.add_argument(
+        "--yaw",
+        type=float,
+        default=0,
+        help="Yaw camera left/right degrees. Positive values rotate right; negative values rotate left.",
+    )
+    e2p_parser.add_argument(
+        "--pitch",
+        type=float,
+        default=0,
+        help="Pitch camera up/down degrees. Positive values pitch up; negative values pitch down.",
+    )
+    e2p_parser.add_argument(
+        "--roll",
+        type=float,
+        default=0,
+        help="Roll camera degrees. Positive values rotate counterclockwise; negative values rotate clockwise.",
+    )
     e2p_parser.add_argument(
         "--mode", "-m", default="bilinear", choices=["bilinear", "nearest"], help="Resampling method."
     )
@@ -100,10 +116,10 @@ def main():
         out = py360convert.e2p(
             img,
             fov_deg=(args.h_fov, args.v_fov),
-            u_deg=args.h_view,
-            v_deg=args.v_view,
-            out_hw=(args.h, args.w),
-            in_rot_deg=0.0,
+            u_deg=args.yaw,
+            v_deg=args.pitch,
+            out_hw=(args.height, args.width),
+            in_rot_deg=args.roll,
             mode=args.mode,
         )
         Image.fromarray(out).save(args.output)
