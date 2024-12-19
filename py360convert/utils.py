@@ -137,7 +137,7 @@ def equirect_facetype(h: int, w: int) -> NDArray[np.int32]:
     tp = np.roll(np.arange(4).repeat(w // 4)[None, :].repeat(h, 0), 3 * w // 8, 1)
 
     # Prepare ceil mask
-    mask = np.zeros((h, w // 4), np.bool_)
+    mask = np.zeros((h, w // 4), bool)
     idx = np.linspace(-np.pi, np.pi, w // 4) / 4
     idx = (h // 2 - np.round(np.arctan(np.cos(idx)) * h / np.pi)).astype(int)
     for i, j in enumerate(idx):
