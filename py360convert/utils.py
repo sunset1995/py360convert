@@ -114,34 +114,52 @@ def equirect_uvgrid(h: int, w: int) -> NDArray[np.float32]:
 
 
 def equirect_facetype(h: int, w: int) -> NDArray[np.int32]:
-    """Generate a facetype index image.
+    """Generate a 2D equirectangular segmentation image for each facetype.
+
+    The generated segmentation image has lookup:
+
+    * 0 - front
+    * 1 - right
+    * 2 - back
+    * 3 - left
+    * 4 - up
+    * 5 - down
+
+    Example:
+
+        >>> equirect_facetype(8, 12)
+            array([[4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4],
+                   [4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4],
+                   [2, 3, 3, 3, 0, 0, 0, 1, 1, 1, 2, 2],
+                   [2, 3, 3, 3, 0, 0, 0, 1, 1, 1, 2, 2],
+                   [2, 3, 3, 3, 0, 0, 0, 1, 1, 1, 2, 2],
+                   [2, 3, 3, 3, 0, 0, 0, 1, 1, 1, 2, 2],
+                   [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5],
+                   [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]], dtype=int32)
 
     Parameters
     ----------
     h: int
-        Height.
+        Desired output height.
     w: int
-        Width.
+        Desired output width. Must be a multiple of 4.
 
     Returns
     -------
     ndarray
-    Array where the integer elements represent the face type:
-        * front - 0
-        * right - 1
-        * back  - 2
-        * left  - 3
-        * up    - 4
-        * down  - 5
+        2D numpy equirectangular segmentation image for the 6 face types.
     """
+    if w % 4:
+        raise ValueError(f"w must be a multiple of 4. Got {w}.")
+
     tp = np.roll(np.arange(4).repeat(w // 4)[None, :].repeat(h, 0), 3 * w // 8, 1)
 
     # Prepare ceil mask
     mask = np.zeros((h, w // 4), np.bool_)
     idx = np.linspace(-np.pi, np.pi, w // 4) / 4
-    idx = (h // 2 - np.round(np.arctan(np.cos(idx)) * h / np.pi)).astype(int)
+    idx = np.round(h / 2 - np.arctan(np.cos(idx)) * h / np.pi).astype(np.int32)
     for i, j in enumerate(idx):
-        mask[:j, i] = 1
+        mask[:j, i] = True
     mask = np.roll(np.concatenate([mask] * 4, 1), 3 * w // 8, 1)
 
     tp[mask] = 4
@@ -349,9 +367,9 @@ def cube_h2dice(cube_h: NDArray[DType]) -> NDArray[DType]:
 
 
 def cube_dice2h(cube_dice: NDArray[DType]) -> NDArray[DType]:
-    w = cube_dice.shape[0] // 3
     if cube_dice.shape[0] % 3 != 0:
         raise ValueError("Dice image height must be a multiple of 3.")
+    w = cube_dice.shape[0] // 3
     if cube_dice.shape[1] != w * 4:
         raise ValueError(f'Dice width must be 4 "faces" (4x{w}={4*w}) wide.')
     cube_h = np.zeros((w, w * 6, cube_dice.shape[2]), dtype=cube_dice.dtype)
