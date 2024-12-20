@@ -156,12 +156,8 @@ def c2e(
     coor_x_norm = (np.clip(coor_x, -0.5, 0.5) + 0.5) * face_w
     coor_y_norm = (np.clip(coor_y, -0.5, 0.5) + 0.5) * face_w
 
-    equirec = np.stack(
-        [
-            sample_cubefaces(cube_faces[..., i], tp, coor_y_norm, coor_x_norm, order=order)
-            for i in range(cube_faces.shape[3])
-        ],
-        axis=-1,
-    )
+    equirec = np.empty((h, w, cube_faces.shape[3]))
+    for i in range(cube_faces.shape[3]):
+        equirec[..., i] = sample_cubefaces(cube_faces[..., i], tp, coor_y_norm, coor_x_norm, order=order)
 
     return equirec[..., 0] if squeeze else equirec
