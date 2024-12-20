@@ -307,39 +307,56 @@ def sample_equirec(e_img: NDArray[DType], coor_xy: NDArray, order: int) -> NDArr
 def sample_cubefaces(
     cube_faces: NDArray[DType], tp: NDArray, coor_y: NDArray, coor_x: NDArray, order: int
 ) -> NDArray[DType]:
-    # Pad up down
-    pad_ud = np.zeros((6, 2, cube_faces.shape[2]), dtype=cube_faces.dtype)
-    pad_ud[0, 0] = cube_faces[5, 0, :]
-    pad_ud[0, 1] = cube_faces[4, -1, :]
-    pad_ud[1, 0] = cube_faces[5, :, -1]
-    pad_ud[1, 1] = cube_faces[4, ::-1, -1]
-    pad_ud[2, 0] = cube_faces[5, -1, ::-1]
-    pad_ud[2, 1] = cube_faces[4, 0, ::-1]
-    pad_ud[3, 0] = cube_faces[5, ::-1, 0]
-    pad_ud[3, 1] = cube_faces[4, :, 0]
-    pad_ud[4, 0] = cube_faces[0, 0, :]
-    pad_ud[4, 1] = cube_faces[2, 0, ::-1]
-    pad_ud[5, 0] = cube_faces[2, -1, ::-1]
-    pad_ud[5, 1] = cube_faces[0, -1, :]
-    cube_faces = np.concatenate([cube_faces, pad_ud], 1, dtype=cube_faces.dtype)
+    """Sample cube faces.
 
-    # Pad left right
-    pad_lr = np.zeros((6, cube_faces.shape[1], 2), dtype=cube_faces.dtype)
-    pad_lr[0, :, 0] = cube_faces[1, :, 0]
-    pad_lr[0, :, 1] = cube_faces[3, :, -1]
-    pad_lr[1, :, 0] = cube_faces[2, :, 0]
-    pad_lr[1, :, 1] = cube_faces[0, :, -1]
-    pad_lr[2, :, 0] = cube_faces[3, :, 0]
-    pad_lr[2, :, 1] = cube_faces[1, :, -1]
-    pad_lr[3, :, 0] = cube_faces[0, :, 0]
-    pad_lr[3, :, 1] = cube_faces[2, :, -1]
-    pad_lr[4, 1:-1, 0] = cube_faces[1, 0, ::-1]
-    pad_lr[4, 1:-1, 1] = cube_faces[3, 0, :]
-    pad_lr[5, 1:-1, 0] = cube_faces[1, -2, :]
-    pad_lr[5, 1:-1, 1] = cube_faces[3, -2, ::-1]
-    cube_faces = np.concatenate([cube_faces, pad_lr], 2, dtype=cube_faces.dtype)
+    Parameters
+    ----------
+    cube_faces: numpy.ndarray
+        (6, H, W) Cube faces.
+    tp: numpy.ndarray
+        (H, W) facetype image from ``equirect_facetype``.
+    coor_y: numpy.ndarray
+        (H, W) Y coordinates to sample.
+    coor_x: numpy.ndarray
+        (H, W) X coordinates to sample.
+    order: int
+        The order of the spline interpolation. See ``scipy.ndimage.map_coordinates``.
+    """
+    ABOVE = (-1, slice(None))
+    BELOW = (-2, slice(None))
+    LEFT = (slice(None), -1)
+    RIGHT = (slice(None), -2)
+    padded = np.pad(cube_faces, ((0, 0), (0, 2), (0, 2)), mode="constant")
 
-    return map_coordinates(cube_faces, [tp, coor_y, coor_x], order=order, mode="wrap")  # pyright: ignore[reportReturnType]
+    # Pad above/below
+    padded[Face.FRONT, *ABOVE] = padded[Face.UP, -3, :]
+    padded[Face.FRONT, *BELOW] = padded[Face.DOWN, 0, :]
+    padded[Face.RIGHT, *ABOVE] = padded[Face.UP, ::-1, -3]
+    padded[Face.RIGHT, *BELOW] = padded[Face.DOWN, :, -3]
+    padded[Face.BACK, *ABOVE] = padded[Face.UP, 0, ::-1]
+    padded[Face.BACK, *BELOW] = padded[Face.DOWN, -3, ::-1]
+    padded[Face.LEFT, *ABOVE] = padded[Face.UP, :, 0]
+    padded[Face.LEFT, *BELOW] = padded[Face.DOWN, ::-1, 0]
+    padded[Face.UP, *ABOVE] = padded[Face.BACK, 0, ::-1]
+    padded[Face.UP, *BELOW] = padded[Face.FRONT, 0, :]
+    padded[Face.DOWN, *ABOVE] = padded[Face.FRONT, -3, :]
+    padded[Face.DOWN, *BELOW] = padded[Face.BACK, -3, ::-1]
+
+    # Pad left/right
+    padded[Face.FRONT, *LEFT] = padded[Face.LEFT, :, -3]
+    padded[Face.FRONT, *RIGHT] = padded[Face.RIGHT, :, 0]
+    padded[Face.RIGHT, *LEFT] = padded[Face.FRONT, :, -3]
+    padded[Face.RIGHT, *RIGHT] = padded[Face.BACK, :, 0]
+    padded[Face.BACK, *LEFT] = padded[Face.RIGHT, :, -3]
+    padded[Face.BACK, *RIGHT] = padded[Face.LEFT, :, 0]
+    padded[Face.LEFT, *LEFT] = padded[Face.BACK, :, -3]
+    padded[Face.LEFT, *RIGHT] = padded[Face.FRONT, :, 0]
+    padded[Face.UP, *LEFT] = padded[Face.LEFT, 0, :]
+    padded[Face.UP, *RIGHT] = padded[Face.RIGHT, 0, ::-1]
+    padded[Face.DOWN, *LEFT] = padded[Face.LEFT, -3, ::-1]
+    padded[Face.DOWN, *RIGHT] = padded[Face.RIGHT, -3, :]
+
+    return map_coordinates(padded, [tp, coor_y, coor_x], order=order, mode="wrap")  # pyright: ignore[reportReturnType]
 
 
 def cube_h2list(cube_h: NDArray[DType]) -> list[NDArray[DType]]:
