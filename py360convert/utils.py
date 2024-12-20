@@ -322,41 +322,41 @@ def sample_cubefaces(
     order: int
         The order of the spline interpolation. See ``scipy.ndimage.map_coordinates``.
     """
-    ABOVE = (-1, slice(None))
-    BELOW = (-2, slice(None))
-    LEFT = (slice(None), -1)
-    RIGHT = (slice(None), -2)
-    padded = np.pad(cube_faces, ((0, 0), (0, 2), (0, 2)), mode="constant")
+    ABOVE = (0, slice(None))
+    BELOW = (-1, slice(None))
+    LEFT = (slice(None), 0)
+    RIGHT = (slice(None), -1)
+    padded = np.pad(cube_faces, ((0, 0), (1, 1), (1, 1)), mode="constant")
 
     # Pad above/below
-    padded[Face.FRONT, *ABOVE] = padded[Face.UP, -3, :]
-    padded[Face.FRONT, *BELOW] = padded[Face.DOWN, 0, :]
-    padded[Face.RIGHT, *ABOVE] = padded[Face.UP, ::-1, -3]
-    padded[Face.RIGHT, *BELOW] = padded[Face.DOWN, :, -3]
-    padded[Face.BACK, *ABOVE] = padded[Face.UP, 0, ::-1]
-    padded[Face.BACK, *BELOW] = padded[Face.DOWN, -3, ::-1]
-    padded[Face.LEFT, *ABOVE] = padded[Face.UP, :, 0]
-    padded[Face.LEFT, *BELOW] = padded[Face.DOWN, ::-1, 0]
-    padded[Face.UP, *ABOVE] = padded[Face.BACK, 0, ::-1]
-    padded[Face.UP, *BELOW] = padded[Face.FRONT, 0, :]
-    padded[Face.DOWN, *ABOVE] = padded[Face.FRONT, -3, :]
-    padded[Face.DOWN, *BELOW] = padded[Face.BACK, -3, ::-1]
+    padded[Face.FRONT, *ABOVE] = padded[Face.UP, -2, :]
+    padded[Face.FRONT, *BELOW] = padded[Face.DOWN, 1, :]
+    padded[Face.RIGHT, *ABOVE] = padded[Face.UP, ::-1, -2]
+    padded[Face.RIGHT, *BELOW] = padded[Face.DOWN, :, -2]
+    padded[Face.BACK, *ABOVE] = padded[Face.UP, 1, ::-1]
+    padded[Face.BACK, *BELOW] = padded[Face.DOWN, -2, ::-1]
+    padded[Face.LEFT, *ABOVE] = padded[Face.UP, :, 1]
+    padded[Face.LEFT, *BELOW] = padded[Face.DOWN, ::-1, 1]
+    padded[Face.UP, *ABOVE] = padded[Face.BACK, 1, ::-1]
+    padded[Face.UP, *BELOW] = padded[Face.FRONT, 1, :]
+    padded[Face.DOWN, *ABOVE] = padded[Face.FRONT, -2, :]
+    padded[Face.DOWN, *BELOW] = padded[Face.BACK, -2, ::-1]
 
     # Pad left/right
-    padded[Face.FRONT, *LEFT] = padded[Face.LEFT, :, -3]
-    padded[Face.FRONT, *RIGHT] = padded[Face.RIGHT, :, 0]
-    padded[Face.RIGHT, *LEFT] = padded[Face.FRONT, :, -3]
-    padded[Face.RIGHT, *RIGHT] = padded[Face.BACK, :, 0]
-    padded[Face.BACK, *LEFT] = padded[Face.RIGHT, :, -3]
-    padded[Face.BACK, *RIGHT] = padded[Face.LEFT, :, 0]
-    padded[Face.LEFT, *LEFT] = padded[Face.BACK, :, -3]
-    padded[Face.LEFT, *RIGHT] = padded[Face.FRONT, :, 0]
-    padded[Face.UP, *LEFT] = padded[Face.LEFT, 0, :]
-    padded[Face.UP, *RIGHT] = padded[Face.RIGHT, 0, ::-1]
-    padded[Face.DOWN, *LEFT] = padded[Face.LEFT, -3, ::-1]
-    padded[Face.DOWN, *RIGHT] = padded[Face.RIGHT, -3, :]
+    padded[Face.FRONT, *LEFT] = padded[Face.LEFT, :, -2]
+    padded[Face.FRONT, *RIGHT] = padded[Face.RIGHT, :, 1]
+    padded[Face.RIGHT, *LEFT] = padded[Face.FRONT, :, -2]
+    padded[Face.RIGHT, *RIGHT] = padded[Face.BACK, :, 1]
+    padded[Face.BACK, *LEFT] = padded[Face.RIGHT, :, -2]
+    padded[Face.BACK, *RIGHT] = padded[Face.LEFT, :, 1]
+    padded[Face.LEFT, *LEFT] = padded[Face.BACK, :, -2]
+    padded[Face.LEFT, *RIGHT] = padded[Face.FRONT, :, 1]
+    padded[Face.UP, *LEFT] = padded[Face.LEFT, 1, :]
+    padded[Face.UP, *RIGHT] = padded[Face.RIGHT, 1, ::-1]
+    padded[Face.DOWN, *LEFT] = padded[Face.LEFT, -2, ::-1]
+    padded[Face.DOWN, *RIGHT] = padded[Face.RIGHT, -2, :]
 
-    return map_coordinates(padded, [tp, coor_y, coor_x], order=order, mode="wrap")  # pyright: ignore[reportReturnType]
+    return map_coordinates(padded, [tp, coor_y + 1, coor_x + 1], order=order)  # pyright: ignore[reportReturnType]
 
 
 def cube_h2list(cube_h: NDArray[DType]) -> list[NDArray[DType]]:
