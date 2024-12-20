@@ -1,9 +1,11 @@
 from collections.abc import Sequence
+from enum import IntEnum
 from typing import Any, Literal, Optional, TypeVar, Union
 
 import numpy as np
 from numpy.typing import NDArray
 from scipy.ndimage import map_coordinates
+from scipy.spatial.transform import Rotation
 
 _mode_to_order = {
     "nearest": 0,
@@ -38,6 +40,23 @@ InterpolationMode = Literal[
 DType = TypeVar("DType", bound=np.generic, covariant=True)
 
 
+class Face(IntEnum):
+    """Face type indexing for numpy vectorization."""
+
+    FRONT = 0
+    RIGHT = 1
+    BACK = 2
+    LEFT = 3
+    UP = 4
+    DOWN = 5
+
+
+class Dim(IntEnum):
+    X = 0
+    Y = 1
+    Z = 2
+
+
 def mode_to_order(mode: InterpolationMode) -> int:
     """Convert a human-friendly interpolation string to integer equivalent.
 
@@ -54,6 +73,11 @@ def mode_to_order(mode: InterpolationMode) -> int:
         return _mode_to_order[mode.lower()]
     except KeyError:
         raise ValueError(f'Unknown mode "{mode}".') from None
+
+
+def slice_chunk(index: int, width: int):
+    start = index * width
+    return slice(start, start + width)
 
 
 def xyzcube(face_w: int) -> NDArray[np.float32]:
@@ -78,30 +102,32 @@ def xyzcube(face_w: int) -> NDArray[np.float32]:
     rng = np.linspace(-0.5, 0.5, num=face_w, dtype=np.float32)
     grid = np.stack(np.meshgrid(rng, -rng), -1)
 
+    def face_slice(index):
+        return slice_chunk(index, face_w)
+
     # Front face (z = 0.5)
-    out[:, 0 * face_w : 1 * face_w, [0, 1]] = grid
-    out[:, 0 * face_w : 1 * face_w, 2] = 0.5
+    out[:, face_slice(Face.FRONT), [Dim.X, Dim.Y]] = grid
+    out[:, face_slice(Face.FRONT), Dim.Z] = 0.5
 
     # Right face (x = 0.5)
-    out[:, 1 * face_w : 2 * face_w, [2, 1]] = grid
-    out[:, 1 * face_w : 2 * face_w, [2, 1]] = np.flip(grid, axis=1)
-    out[:, 1 * face_w : 2 * face_w, 0] = 0.5
+    out[:, face_slice(Face.RIGHT), [Dim.Z, Dim.Y]] = np.flip(grid, axis=1)
+    out[:, face_slice(Face.RIGHT), Dim.X] = 0.5
 
     # Back face (z = -0.5)
-    out[:, 2 * face_w : 3 * face_w, [0, 1]] = np.flip(grid, axis=1)
-    out[:, 2 * face_w : 3 * face_w, 2] = -0.5
+    out[:, face_slice(Face.BACK), [Dim.X, Dim.Y]] = np.flip(grid, axis=1)
+    out[:, face_slice(Face.BACK), Dim.Z] = -0.5
 
     # Left face (x = -0.5)
-    out[:, 3 * face_w : 4 * face_w, [2, 1]] = grid
-    out[:, 3 * face_w : 4 * face_w, 0] = -0.5
+    out[:, face_slice(Face.LEFT), [Dim.Z, Dim.Y]] = grid
+    out[:, face_slice(Face.LEFT), Dim.X] = -0.5
 
     # Up face (y = 0.5)
-    out[:, 4 * face_w : 5 * face_w, [0, 2]] = np.flip(grid, axis=0)
-    out[:, 4 * face_w : 5 * face_w, 1] = 0.5
+    out[:, face_slice(Face.UP), [Dim.X, Dim.Z]] = np.flip(grid, axis=0)
+    out[:, face_slice(Face.UP), Dim.Y] = 0.5
 
     # Down face (y = -0.5)
-    out[:, 5 * face_w : 6 * face_w, [0, 2]] = grid
-    out[:, 5 * face_w : 6 * face_w, 1] = -0.5
+    out[:, face_slice(Face.DOWN), [Dim.X, Dim.Z]] = grid
+    out[:, face_slice(Face.DOWN), Dim.Y] = -0.5
 
     return out
 
@@ -124,6 +150,8 @@ def equirect_facetype(h: int, w: int) -> NDArray[np.int32]:
     * 3 - left
     * 4 - up
     * 5 - down
+
+    See ``Face``.
 
     Example:
 
@@ -158,12 +186,14 @@ def equirect_facetype(h: int, w: int) -> NDArray[np.int32]:
     mask = np.zeros((h, w // 4), np.bool_)
     idx = np.linspace(-np.pi, np.pi, w // 4) / 4
     idx = np.round(h / 2 - np.arctan(np.cos(idx)) * h / np.pi).astype(np.int32)
-    for i, j in enumerate(idx):
-        mask[:j, i] = True
-    mask = np.roll(np.concatenate([mask] * 4, 1), 3 * w // 8, 1)
 
-    tp[mask] = 4
-    tp[np.flip(mask, 0)] = 5
+    row_idx = np.arange(len(mask))[:, None]
+    mask[row_idx < idx[None, :]] = True
+
+    mask = np.roll(np.tile(mask, (1, 4)), 3 * w // 8, 1)
+
+    tp[mask] = Face.UP
+    tp[np.flip(mask, 0)] = Face.DOWN
 
     return tp.astype(np.int32)
 
@@ -176,8 +206,8 @@ def xyzpers(h_fov: float, v_fov: float, u: float, v: float, out_hw: tuple[int, i
     x_rng = np.linspace(-x_max, x_max, num=out_hw[1], dtype=np.float32)
     y_rng = np.linspace(-y_max, y_max, num=out_hw[0], dtype=np.float32)
     out[..., :2] = np.stack(np.meshgrid(x_rng, -y_rng), -1)
-    Rx = rotation_matrix(v, [1, 0, 0])
-    Ry = rotation_matrix(u, [0, 1, 0])
+    Rx = rotation_matrix(v, Dim.X)
+    Ry = rotation_matrix(u, Dim.Y)
     Ri = rotation_matrix(in_rot, np.array([0, 0, 1.0]).dot(Rx).dot(Ry))
 
     return out.dot(Rx).dot(Ry).dot(Ri)
@@ -277,11 +307,6 @@ def sample_equirec(e_img: NDArray[DType], coor_xy: NDArray, order: int) -> NDArr
 def sample_cubefaces(
     cube_faces: NDArray[DType], tp: NDArray, coor_y: NDArray, coor_x: NDArray, order: int
 ) -> NDArray[DType]:
-    cube_faces = cube_faces.copy()
-    # cube_faces[1] = np.flip(cube_faces[1], 1)
-    # cube_faces[2] = np.flip(cube_faces[2], 1)
-    # cube_faces[4] = np.flip(cube_faces[4], 0)
-
     # Pad up down
     pad_ud = np.zeros((6, 2, cube_faces.shape[2]), dtype=cube_faces.dtype)
     pad_ud[0, 0] = cube_faces[5, 0, :]
@@ -359,10 +384,16 @@ def cube_h2dice(cube_h: NDArray[DType]) -> NDArray[DType]:
     cube_dice = np.zeros((w * 3, w * 4, cube_h.shape[2]), dtype=cube_h.dtype)
     cube_list = cube_h2list(cube_h)
     # Order: F R B L U D
+    #        ┌────┐
+    #        │ U  │
+    #   ┌────┼────┼────┬────┐
+    #   │ L  │ F  │ R  │ B  │
+    #   └────┼────┼────┴────┘
+    #        │ D  │
+    #        └────┘
     sxy = [(1, 1), (2, 1), (3, 1), (0, 1), (1, 0), (1, 2)]
-    for i, (sx, sy) in enumerate(sxy):
-        face = cube_list[i]
-        cube_dice[sy * w : (sy + 1) * w, sx * w : (sx + 1) * w] = face
+    for (sx, sy), face in zip(sxy, cube_list):
+        cube_dice[slice_chunk(sy, w), slice_chunk(sx, w)] = face
     return cube_dice
 
 
@@ -374,22 +405,24 @@ def cube_dice2h(cube_dice: NDArray[DType]) -> NDArray[DType]:
         raise ValueError(f'Dice width must be 4 "faces" (4x{w}={4*w}) wide.')
     cube_h = np.zeros((w, w * 6, cube_dice.shape[2]), dtype=cube_dice.dtype)
     # Order: F R B L U D
+    #        ┌────┐
+    #        │ U  │
+    #   ┌────┼────┼────┬────┐
+    #   │ L  │ F  │ R  │ B  │
+    #   └────┼────┼────┴────┘
+    #        │ D  │
+    #        └────┘
     sxy = [(1, 1), (2, 1), (3, 1), (0, 1), (1, 0), (1, 2)]
     for i, (sx, sy) in enumerate(sxy):
-        face = cube_dice[sy * w : (sy + 1) * w, sx * w : (sx + 1) * w]
-        cube_h[:, i * w : (i + 1) * w] = face
+        cube_h[:, slice_chunk(i, w)] = cube_dice[slice_chunk(sy, w), slice_chunk(sx, w)]
     return cube_h
 
 
-def rotation_matrix(rad: float, ax: Union[NDArray, Sequence]):
+def rotation_matrix(rad: float, ax: Union[int, NDArray, Sequence]):
+    if isinstance(ax, int):
+        ax = (np.arange(3) == ax).astype(float)
     ax = np.array(ax)
     if ax.shape != (3,):
         raise ValueError(f"ax must be shape (3,); got {ax.shape}")
-    ax = ax / np.sqrt((ax**2).sum())
-    R = np.diag([np.cos(rad)] * 3)
-    R = R + np.outer(ax, ax) * (1.0 - np.cos(rad))
-
-    ax = ax * np.sin(rad)
-    R = R + np.array([[0, -ax[2], ax[1]], [ax[2], 0, -ax[0]], [-ax[1], ax[0], 0]])
-
+    R = Rotation.from_rotvec(rad * ax).as_matrix()
     return R
