@@ -304,6 +304,59 @@ def sample_equirec(e_img: NDArray[DType], coor_xy: NDArray, order: int) -> NDArr
     return map_coordinates(e_img, [coor_y, coor_x], order=order, mode="wrap")[..., 0]  # pyright: ignore[reportReturnType]
 
 
+try:
+    import numba
+except ImportError:
+    numba = None
+
+if numba:
+
+    @numba.njit(fastmath=True, parallel=True)
+    def numba_map_coordinates(ars, coords):
+        """Numba implementation of scipy's map_coordinates.
+
+        By Han-Kwang Nienhuys and max9111:
+            https://stackoverflow.com/a/62692531
+
+        Parameters
+        ----------
+        ars: numpy.ndarray
+            (m, nx, ny, nz) input array to sample.
+        coords: numpy.ndarray
+            (3, n) coordinates to sample from.
+        """
+        # these have shape (n, 3)
+        ijk = coords.T.astype(np.int16)
+        fijk = (coords.T - ijk).astype(np.float32)
+        n = ijk.shape[0]
+        m = ars.shape[0]
+        out = np.empty((n, m), dtype=np.float64)
+
+        for batch in numba.prange(n):  # pyright: ignore[reportOptionalMemberAccess]
+            i0 = ijk[batch, 0]
+            j0 = ijk[batch, 1]
+            k0 = ijk[batch, 2]
+            # Note: don't write i1, j1, k1 = ijk[l, :3]+1 -- much slower.
+            i1, j1, k1 = i0 + 1, j0 + 1, k0 + 1
+            fi1 = fijk[batch, 0]
+            fj1 = fijk[batch, 1]
+            fk1 = fijk[batch, 2]
+
+            fi0, fj0, fk0 = 1 - fi1, 1 - fj1, 1 - fk1
+            for i in range(ars.shape[0]):
+                out[batch, i] = (
+                    fi0 * fj0 * fk0 * ars[i, i0, j0, k0]
+                    + fi0 * fj0 * fk1 * ars[i, i0, j0, k1]
+                    + fi0 * fj1 * fk0 * ars[i, i0, j1, k0]
+                    + fi0 * fj1 * fk1 * ars[i, i0, j1, k1]
+                    + fi1 * fj0 * fk0 * ars[i, i1, j0, k0]
+                    + fi1 * fj0 * fk1 * ars[i, i1, j0, k1]
+                    + fi1 * fj1 * fk0 * ars[i, i1, j1, k0]
+                    + fi1 * fj1 * fk1 * ars[i, i1, j1, k1]
+                )
+        return out.T
+
+
 def sample_cubefaces(
     cube_faces: NDArray[DType], tp: NDArray, coor_y: NDArray, coor_x: NDArray, order: int
 ) -> NDArray[DType]:
@@ -356,7 +409,14 @@ def sample_cubefaces(
     padded[Face.DOWN][LEFT] = padded[Face.LEFT, -2, ::-1]
     padded[Face.DOWN][RIGHT] = padded[Face.RIGHT, -2, :]
 
-    return map_coordinates(padded, [tp, coor_y + 1, coor_x + 1], order=order)  # pyright: ignore[reportReturnType]
+    coords = np.stack([tp, coor_y + 1, coor_x + 1])
+    if numba and order == 1:
+        out = numba_map_coordinates(padded[None].astype(float), coords.reshape(3, -1))
+        out = out.reshape(coords.shape[1:])
+        out = np.round(out) if np.issubdtype(padded.dtype, np.integer) else out
+        return out.astype(cube_faces.dtype, copy=False)
+    else:
+        return map_coordinates(padded, coords, order=order)  # pyright: ignore[reportReturnType]
 
 
 def cube_h2list(cube_h: NDArray[DType]) -> list[NDArray[DType]]:
