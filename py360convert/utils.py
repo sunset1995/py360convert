@@ -266,7 +266,9 @@ def xyz2uv(xyz: NDArray[DType]) -> tuple[NDArray[DType], NDArray[DType]]:
         * v is in [-pi/2, pi/2]
         * any point i of output array is in [-pi, pi] x [-pi/2, pi/2].
     """
-    x, y, z = np.split(xyz, 3, axis=-1)
+    x = xyz[..., 0:1]  # Keep dimensions but avoid copy
+    y = xyz[..., 1:2]
+    z = xyz[..., 2:3]
     u = np.arctan2(x, z)
     c = np.hypot(x, z)
     v = np.arctan2(y, c)
