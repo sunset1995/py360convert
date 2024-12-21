@@ -324,97 +324,133 @@ def sample_equirec(e_img: NDArray[DType], coor_xy: NDArray, order: int) -> NDArr
     return map_coordinates(e_img, [coor_y, coor_x], order=order, mode="wrap")[..., 0]  # pyright: ignore[reportReturnType]
 
 
-def _cv2_remap(padded, tp, coor_y, coor_x, order):
-    """A much faster sampler; requires opencv (cv2) to be installed.
+class ImageSampler2d:
+    """Arranged as a class so coordinate computations can be re-used across multiple image interpolations."""
 
-    WARNING: coor_y is updated in place (for performance reasons)
-    """
-    if not cv2:
-        raise ValueError("opencv (cv2) must be installed to use _cv2_remap.")
+    def __init__(
+        self,
+        tp: NDArray,
+        coor_x: NDArray,
+        coor_y: NDArray,
+        order: int,
+        h: int,
+        w: int,
+    ):
+        """Initializes sampler and performs pre-computations.
 
-    # Map interpolation modes
-    if order == 0:
-        interpolation = cv2.INTER_NEAREST
-        nninterpolation = True
-    elif order == 1:
-        interpolation = cv2.INTER_LINEAR
-        nninterpolation = False
-    elif order == 3:
-        interpolation = cv2.INTER_CUBIC
-        nninterpolation = False
-    else:
-        raise ValueError
+        Parameters
+        ----------
+        tp: numpy.ndarray
+            (H, W) facetype image from ``equirect_facetype``.
+        coor_x: numpy.ndarray
+            (H, W) X coordinates to sample.
+        coor_y: numpy.ndarray
+            (H, W) Y coordinates to sample.
+        order: int
+            The order of the spline interpolation. See ``scipy.ndimage.map_coordinates``.
+        h: int
+            Expected input image height.
+        w: int
+            Expected input image width.
+        """
+        # Add 1 to compensate for 1-pixel-surround padding.
+        coor_x = coor_x + 1  # Not done inplace on purpose.
+        coor_y = coor_y + 1  # Not done inplace on purpose.
 
-    # Vertically concatenated the image and update y-coordinates so we can do a single remap operation.
-    h, w = padded.shape[-2:]
-    v_img = padded.reshape(-1, w)
-    coor_y += np.multiply(tp, h, dtype=np.float32)
-    map_1, map_2 = cv2.convertMaps(coor_x, coor_y, cv2.CV_16SC2, nninterpolation=nninterpolation)
-    out = cv2.remap(v_img, map_1, map_2, interpolation=interpolation)
-    return out
+        self._tp = tp
+        self._h = h
+        self._w = w
+        if cv2 and order in (0, 1, 3):
+            if order == 0:
+                self._order = cv2.INTER_NEAREST
+                nninterpolation = True
+            elif order == 1:
+                self._order = cv2.INTER_LINEAR
+                nninterpolation = False
+            elif order == 3:
+                self._order = cv2.INTER_CUBIC
+                nninterpolation = False
+            else:
+                raise NotImplementedError
 
+            # The +2 comes from padding from self._pad.
+            coor_y += np.multiply(tp, h + 2, dtype=np.float32)
+            self._coor_x, self._coor_y = cv2.convertMaps(
+                coor_x,
+                coor_y,
+                cv2.CV_16SC2,
+                nninterpolation=nninterpolation,
+            )
+        else:
+            self._coor_x = coor_x
+            self._coor_y = coor_y
+            self._order = order
 
-def sample_cubefaces(
-    cube_faces: NDArray[DType], tp: NDArray, coor_y: NDArray, coor_x: NDArray, order: int
-) -> NDArray[DType]:
-    """Sample cube faces.
+    def __call__(self, cube_faces: NDArray[DType]) -> NDArray[DType]:
+        """Sample cube faces.
 
-    Parameters
-    ----------
-    cube_faces: numpy.ndarray
-        (6, S, S) Cube faces.
-    tp: numpy.ndarray
-        (H, W) facetype image from ``equirect_facetype``.
-    coor_y: numpy.ndarray
-        (H, W) Y coordinates to sample.
-    coor_x: numpy.ndarray
-        (H, W) X coordinates to sample.
-    order: int
-        The order of the spline interpolation. See ``scipy.ndimage.map_coordinates``.
+        Parameters
+        ----------
+        cube_faces: numpy.ndarray
+            (6, S, S) Cube faces.
 
-    Returns
-    -------
-    numpy.ndarray
-        (H, W) Sampled image.
-    """
-    ABOVE = (0, slice(None))
-    BELOW = (-1, slice(None))
-    LEFT = (slice(None), 0)
-    RIGHT = (slice(None), -1)
-    padded = np.pad(cube_faces, ((0, 0), (1, 1), (1, 1)), mode="empty")
+        Returns
+        -------
+        numpy.ndarray
+            (H, W) Sampled image.
+        """
+        h, w = cube_faces.shape[-2:]
+        if h != self._h:
+            raise ValueError("Input height {h} doesn't match expected height {self._h}.")
+        if w != self._w:
+            raise ValueError("Input width {w} doesn't match expected height {self._w}.")
 
-    # Pad above/below
-    padded[Face.FRONT][ABOVE] = padded[Face.UP, -2, :]
-    padded[Face.FRONT][BELOW] = padded[Face.DOWN, 1, :]
-    padded[Face.RIGHT][ABOVE] = padded[Face.UP, ::-1, -2]
-    padded[Face.RIGHT][BELOW] = padded[Face.DOWN, :, -2]
-    padded[Face.BACK][ABOVE] = padded[Face.UP, 1, ::-1]
-    padded[Face.BACK][BELOW] = padded[Face.DOWN, -2, ::-1]
-    padded[Face.LEFT][ABOVE] = padded[Face.UP, :, 1]
-    padded[Face.LEFT][BELOW] = padded[Face.DOWN, ::-1, 1]
-    padded[Face.UP][ABOVE] = padded[Face.BACK, 1, ::-1]
-    padded[Face.UP][BELOW] = padded[Face.FRONT, 1, :]
-    padded[Face.DOWN][ABOVE] = padded[Face.FRONT, -2, :]
-    padded[Face.DOWN][BELOW] = padded[Face.BACK, -2, ::-1]
+        padded = self._pad(cube_faces)
+        if cv2 and self._order in (0, 1, 3):
+            w = padded.shape[-1]
+            v_img = padded.reshape(-1, w)
+            out = cv2.remap(v_img, self._coor_x, self._coor_y, interpolation=self._order)  # pyright: ignore
+        else:
+            out = map_coordinates(padded, (self._tp, self._coor_y, self._coor_x), order=self._order)
+        return out  # pyright: ignore[reportReturnType]
 
-    # Pad left/right
-    padded[Face.FRONT][LEFT] = padded[Face.LEFT, :, -2]
-    padded[Face.FRONT][RIGHT] = padded[Face.RIGHT, :, 1]
-    padded[Face.RIGHT][LEFT] = padded[Face.FRONT, :, -2]
-    padded[Face.RIGHT][RIGHT] = padded[Face.BACK, :, 1]
-    padded[Face.BACK][LEFT] = padded[Face.RIGHT, :, -2]
-    padded[Face.BACK][RIGHT] = padded[Face.LEFT, :, 1]
-    padded[Face.LEFT][LEFT] = padded[Face.BACK, :, -2]
-    padded[Face.LEFT][RIGHT] = padded[Face.FRONT, :, 1]
-    padded[Face.UP][LEFT] = padded[Face.LEFT, 1, :]
-    padded[Face.UP][RIGHT] = padded[Face.RIGHT, 1, ::-1]
-    padded[Face.DOWN][LEFT] = padded[Face.LEFT, -2, ::-1]
-    padded[Face.DOWN][RIGHT] = padded[Face.RIGHT, -2, :]
+    def _pad(self, cube_faces: NDArray[DType]) -> NDArray[DType]:
+        """Adds 1 pixel of padding around each cube face."""
+        ABOVE = (0, slice(None))
+        BELOW = (-1, slice(None))
+        LEFT = (slice(None), 0)
+        RIGHT = (slice(None), -1)
+        padded = np.pad(cube_faces, ((0, 0), (1, 1), (1, 1)), mode="empty")
 
-    if cv2 and order in (0, 1, 3):
-        return _cv2_remap(padded, tp, coor_y + 1, coor_x + 1, order)
-    else:
-        return map_coordinates(padded, [tp, coor_y + 1, coor_x + 1], order=order)  # pyright: ignore[reportReturnType]
+        # Pad above/below
+        padded[Face.FRONT][ABOVE] = padded[Face.UP, -2, :]
+        padded[Face.FRONT][BELOW] = padded[Face.DOWN, 1, :]
+        padded[Face.RIGHT][ABOVE] = padded[Face.UP, ::-1, -2]
+        padded[Face.RIGHT][BELOW] = padded[Face.DOWN, :, -2]
+        padded[Face.BACK][ABOVE] = padded[Face.UP, 1, ::-1]
+        padded[Face.BACK][BELOW] = padded[Face.DOWN, -2, ::-1]
+        padded[Face.LEFT][ABOVE] = padded[Face.UP, :, 1]
+        padded[Face.LEFT][BELOW] = padded[Face.DOWN, ::-1, 1]
+        padded[Face.UP][ABOVE] = padded[Face.BACK, 1, ::-1]
+        padded[Face.UP][BELOW] = padded[Face.FRONT, 1, :]
+        padded[Face.DOWN][ABOVE] = padded[Face.FRONT, -2, :]
+        padded[Face.DOWN][BELOW] = padded[Face.BACK, -2, ::-1]
+
+        # Pad left/right
+        padded[Face.FRONT][LEFT] = padded[Face.LEFT, :, -2]
+        padded[Face.FRONT][RIGHT] = padded[Face.RIGHT, :, 1]
+        padded[Face.RIGHT][LEFT] = padded[Face.FRONT, :, -2]
+        padded[Face.RIGHT][RIGHT] = padded[Face.BACK, :, 1]
+        padded[Face.BACK][LEFT] = padded[Face.RIGHT, :, -2]
+        padded[Face.BACK][RIGHT] = padded[Face.LEFT, :, 1]
+        padded[Face.LEFT][LEFT] = padded[Face.BACK, :, -2]
+        padded[Face.LEFT][RIGHT] = padded[Face.FRONT, :, 1]
+        padded[Face.UP][LEFT] = padded[Face.LEFT, 1, :]
+        padded[Face.UP][RIGHT] = padded[Face.RIGHT, 1, ::-1]
+        padded[Face.DOWN][LEFT] = padded[Face.LEFT, -2, ::-1]
+        padded[Face.DOWN][RIGHT] = padded[Face.RIGHT, -2, :]
+
+        return padded
 
 
 def cube_h2list(cube_h: NDArray[DType]) -> list[NDArray[DType]]:

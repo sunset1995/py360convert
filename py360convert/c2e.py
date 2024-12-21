@@ -7,6 +7,7 @@ from .utils import (
     CubeFormat,
     DType,
     Face,
+    ImageSampler2d,
     InterpolationMode,
     cube_dice2list,
     cube_dict2list,
@@ -14,7 +15,6 @@ from .utils import (
     equirect_facetype,
     equirect_uvgrid,
     mode_to_order,
-    sample_cubefaces,
 )
 
 
@@ -163,7 +163,8 @@ def c2e(
     coor_y.clip(0, face_w, out=coor_y)
 
     equirec = np.empty((h, w, cube_faces.shape[3]), dtype=cube_faces[0].dtype)
+    sampler = ImageSampler2d(tp, coor_x, coor_y, order, face_w, face_w)
     for i in range(cube_faces.shape[3]):
-        equirec[..., i] = sample_cubefaces(cube_faces[..., i], tp, coor_y, coor_x, order=order)
+        equirec[..., i] = sampler(cube_faces[..., i])
 
     return equirec[..., 0] if squeeze else equirec
