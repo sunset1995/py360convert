@@ -91,48 +91,59 @@ def xyzcube(face_w: int) -> NDArray[np.float32]:
 
     Parameters
     ----------
-        face_w: int
-            Specify the length of each face of the cubemap.
+    face_w: int
+        Specify the length of each face of the cubemap.
 
     Returns
     -------
-        out: ndarray
-            An array object with dimension (face_w, face_w * 6, 3)
-            which store the each face of numalized cube coordinates.
-            The cube is centered at the origin so that each face k
-            in out has range [-0.5, 0.5] x [-0.5, 0.5].
-
+    out: ndarray
+        An array object with dimension (face_w, face_w * 6, 3)
+        which store the each face of numalized cube coordinates.
+        The cube is centered at the origin so that each face k
+        in out has range [-0.5, 0.5] x [-0.5, 0.5].
     """
-    out = np.zeros((face_w, face_w * 6, 3), np.float32)
+    out = np.empty((face_w, face_w * 6, 3), np.float32)
+
+    # Create coordinates once and reuse
     rng = np.linspace(-0.5, 0.5, num=face_w, dtype=np.float32)
-    grid = np.stack(np.meshgrid(rng, -rng), -1)
+    x, y = np.meshgrid(rng, -rng)
+
+    # Pre-compute flips
+    x_flip = np.flip(x, 1)
+    y_flip = np.flip(y, 0)
 
     def face_slice(index):
         return slice_chunk(index, face_w)
 
     # Front face (z = 0.5)
-    out[:, face_slice(Face.FRONT), [Dim.X, Dim.Y]] = grid
+    out[:, face_slice(Face.FRONT), Dim.X] = x
+    out[:, face_slice(Face.FRONT), Dim.Y] = y
     out[:, face_slice(Face.FRONT), Dim.Z] = 0.5
 
     # Right face (x = 0.5)
-    out[:, face_slice(Face.RIGHT), [Dim.Z, Dim.Y]] = np.flip(grid, axis=1)
     out[:, face_slice(Face.RIGHT), Dim.X] = 0.5
+    out[:, face_slice(Face.RIGHT), Dim.Y] = y
+    out[:, face_slice(Face.RIGHT), Dim.Z] = x_flip
 
     # Back face (z = -0.5)
-    out[:, face_slice(Face.BACK), [Dim.X, Dim.Y]] = np.flip(grid, axis=1)
+    out[:, face_slice(Face.BACK), Dim.X] = x_flip
+    out[:, face_slice(Face.BACK), Dim.Y] = y
     out[:, face_slice(Face.BACK), Dim.Z] = -0.5
 
     # Left face (x = -0.5)
-    out[:, face_slice(Face.LEFT), [Dim.Z, Dim.Y]] = grid
     out[:, face_slice(Face.LEFT), Dim.X] = -0.5
+    out[:, face_slice(Face.LEFT), Dim.Y] = y
+    out[:, face_slice(Face.LEFT), Dim.Z] = x
 
     # Up face (y = 0.5)
-    out[:, face_slice(Face.UP), [Dim.X, Dim.Z]] = np.flip(grid, axis=0)
+    out[:, face_slice(Face.UP), Dim.X] = x
     out[:, face_slice(Face.UP), Dim.Y] = 0.5
+    out[:, face_slice(Face.UP), Dim.Z] = y_flip
 
     # Down face (y = -0.5)
-    out[:, face_slice(Face.DOWN), [Dim.X, Dim.Z]] = grid
+    out[:, face_slice(Face.DOWN), Dim.X] = x
     out[:, face_slice(Face.DOWN), Dim.Y] = -0.5
+    out[:, face_slice(Face.DOWN), Dim.Z] = y
 
     return out
 
