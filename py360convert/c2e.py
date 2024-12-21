@@ -4,16 +4,17 @@ import numpy as np
 from numpy.typing import NDArray
 
 from .utils import (
+    CubeFaceSampler,
     CubeFormat,
     DType,
+    Face,
     InterpolationMode,
-    cube_dice2h,
-    cube_dict2h,
-    cube_list2h,
+    cube_dice2list,
+    cube_dict2list,
+    cube_h2list,
     equirect_facetype,
     equirect_uvgrid,
     mode_to_order,
-    sample_cubefaces,
 )
 
 
@@ -74,6 +75,8 @@ def c2e(
         Equirectangular image.
     """
     order = mode_to_order(mode)
+    if w % 8 != 0:
+        raise ValueError("w must be a multiple of 8.")
 
     if cube_format == "horizon":
         if not isinstance(cubemap, np.ndarray):
@@ -83,17 +86,18 @@ def c2e(
             squeeze = True
         else:
             squeeze = False
+        cube_faces = cube_h2list(cubemap)
     elif cube_format == "list":
         if not isinstance(cubemap, list):
             raise TypeError('cubemap must be a list for cube_format="list"')
         if len({x.shape for x in cubemap}) != 1:
             raise ValueError("All cubemap elements must have same shape")
         if cubemap[0].ndim == 2:
-            cubemap = [x[..., None] for x in cubemap]
+            cube_faces = [x[..., None] for x in cubemap]
             squeeze = True
         else:
+            cube_faces = cubemap
             squeeze = False
-        cubemap = cube_list2h(cubemap)
     elif cube_format == "dict":
         if not isinstance(cubemap, dict):
             raise TypeError('cubemap must be a dict for cube_format="dict"')
@@ -104,7 +108,7 @@ def c2e(
             squeeze = True
         else:
             squeeze = False
-        cubemap = cube_dict2h(cubemap)
+        cube_faces = cube_dict2list(cubemap)
     elif cube_format == "dice":
         if not isinstance(cubemap, np.ndarray):
             raise TypeError('cubemap must be a numpy array for cube_format="dice"')
@@ -113,51 +117,54 @@ def c2e(
             squeeze = True
         else:
             squeeze = False
-        cubemap = cube_dice2h(cubemap)
+        cube_faces = cube_dice2list(cubemap)
     else:
         raise ValueError('Unknown cube_format "{cube_format}".')
 
-    if cubemap.ndim != 3:
-        raise ValueError(f"Cubemap must have 2 or 3 dimensions; got {cubemap.ndim}.")
+    cube_faces = np.stack(cube_faces)
 
-    if cubemap.shape[0] * 6 != cubemap.shape[1]:
-        raise ValueError("Cubemap's width must by 6x its height.")
-    if w % 8 != 0:
-        raise ValueError("w must be a multiple of 8.")
-    face_w = cubemap.shape[0]
+    if cube_faces.shape[1] != cube_faces.shape[2]:
+        raise ValueError("Cubemap faces must be square.")
+    face_w = cube_faces.shape[2]
 
-    uv = equirect_uvgrid(h, w)
-    u, v = np.split(uv, 2, axis=-1)
-    u = u[..., 0]
-    v = v[..., 0]
-    cube_faces = np.stack(np.split(cubemap, 6, 1), 0)
+    u, v = equirect_uvgrid(h, w)
 
     # Get face id to each pixel: 0F 1R 2B 3L 4U 5D
     tp = equirect_facetype(h, w)
-    coor_x = np.zeros((h, w))
-    coor_y = np.zeros((h, w))
 
-    for i in range(4):
-        mask = tp == i
-        coor_x[mask] = 0.5 * np.tan(u[mask] - np.pi * i / 2)
-        coor_y[mask] = -0.5 * np.tan(v[mask]) / np.cos(u[mask] - np.pi * i / 2)
+    coor_x = np.empty((h, w), dtype=np.float32)
+    coor_y = np.empty((h, w), dtype=np.float32)
+    face_w2 = face_w / 2
 
-    mask = tp == 4
-    c = 0.5 * np.tan(np.pi / 2 - v[mask])
+    # Middle band (front/right/back/left)
+    mask = tp < Face.UP
+    angles = u[mask] - (np.pi / 2 * tp[mask])
+    tan_angles = np.tan(angles)
+    cos_angles = np.cos(angles)
+    tan_v = np.tan(v[mask])
+
+    coor_x[mask] = face_w2 * tan_angles
+    coor_y[mask] = -face_w2 * tan_v / cos_angles
+
+    mask = tp == Face.UP
+    c = face_w2 * np.tan(np.pi / 2 - v[mask])
     coor_x[mask] = c * np.sin(u[mask])
     coor_y[mask] = c * np.cos(u[mask])
 
-    mask = tp == 5
-    c = 0.5 * np.tan(np.pi / 2 - np.abs(v[mask]))
+    mask = tp == Face.DOWN
+    c = face_w2 * np.tan(np.pi / 2 - np.abs(v[mask]))
     coor_x[mask] = c * np.sin(u[mask])
     coor_y[mask] = -c * np.cos(u[mask])
 
     # Final renormalize
-    coor_x_norm = (np.clip(coor_x, -0.5, 0.5) + 0.5) * face_w
-    coor_y_norm = (np.clip(coor_y, -0.5, 0.5) + 0.5) * face_w
+    coor_x += face_w2
+    coor_y += face_w2
+    coor_x.clip(0, face_w, out=coor_x)
+    coor_y.clip(0, face_w, out=coor_y)
 
-    equirec = np.empty((h, w, cube_faces.shape[3]))
+    equirec = np.empty((h, w, cube_faces.shape[3]), dtype=cube_faces[0].dtype)
+    sampler = CubeFaceSampler(tp, coor_x, coor_y, order, face_w, face_w)
     for i in range(cube_faces.shape[3]):
-        equirec[..., i] = sample_cubefaces(cube_faces[..., i], tp, coor_y_norm, coor_x_norm, order=order)
+        equirec[..., i] = sampler(cube_faces[..., i])
 
     return equirec[..., 0] if squeeze else equirec

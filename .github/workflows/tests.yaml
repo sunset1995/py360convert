@@ -93,7 +93,17 @@ jobs:
           source ${{ env.ACTIVATE_PYTHON_VENV }}
           pre-commit run --show-diff-on-failure --color=always --all-files
 
-      - name: Run tests
+      - name: Run tests (standard install)
+        run: |
+          source ${{ env.ACTIVATE_PYTHON_VENV }}
+          python -m pytest
+
+      - name: Install opencv
+        run: |
+          source ${{ env.ACTIVATE_PYTHON_VENV }}
+          pip install opencv-python
+
+      - name: Run tests (with opencv)
         run: |
           source ${{ env.ACTIVATE_PYTHON_VENV }}
           python -m pytest
