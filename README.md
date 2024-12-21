@@ -1,13 +1,13 @@
 # py360convert
 
 Features of this project:
-- Conversion between cubemap and equirectangular  
+- Conversion between cubemap and equirectangular:
     ![](assets/teaser_convertion.png)
-- Equirectangular to planar  
+- Conversion between Equirectangular and planar:
     ![](assets/teaser_2planar.png)
-- Pure python implementation and depend only on [numpy](http://www.numpy.org/) and [scipy](https://www.scipy.org/)
-- Vectorization implementation (in most of the place)
-    - `c2e` takes 300ms and `e2c` takes 160ms on 1.6 GHz Intel Core i5 CPU
+- Pure python implementation and depend only on [numpy](http://www.numpy.org/) and [scipy](https://www.scipy.org/).
+- Vectorization implementation:
+    - If opencv is installed, py360convert will automatically use it to accelerate computations (several times speedup).
 
 ## Install
 ```
