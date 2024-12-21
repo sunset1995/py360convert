@@ -331,6 +331,8 @@ class EquirecSampler:
         coor_y: NDArray,
         order: int,
     ):
+        # Add 1 to the coordinates to compensate for the 1 pixel upper padding.
+        coor_y = coor_y + 1  # Not done inplace on purpose.
         if cv2 and order in (0, 1, 3):
             self._use_cv2 = True
             if order == 0:
@@ -345,7 +347,6 @@ class EquirecSampler:
             else:
                 raise NotImplementedError
 
-            # TODO: I think coor_y has an off-by-one due to the 1 pixel padding?
             self._coor_x, self._coor_y = cv2.convertMaps(
                 coor_x,
                 coor_y,
@@ -367,7 +368,6 @@ class EquirecSampler:
                 padded,
                 (self._coor_y, self._coor_x),
                 order=self._order,
-                mode="wrap",
             )[..., 0]
 
         return out  # pyright: ignore[reportReturnType]
@@ -375,10 +375,10 @@ class EquirecSampler:
     def _pad(self, img: NDArray[DType]) -> NDArray[DType]:
         """Adds 1 pixel of padding above/below image."""
         w = img.shape[1]
-        pad_u = np.roll(img[[0]], w // 2, 1)
-        pad_d = np.roll(img[[-1]], w // 2, 1)
-        img = np.concatenate([img, pad_d, pad_u], 0, dtype=img.dtype)
-        return img
+        padded = np.pad(img, ((1, 1), (0, 0)), mode="empty")
+        padded[0, :] = np.roll(img[[0]], w // 2, 1)
+        padded[-1, :] = np.roll(img[[-1]], w // 2, 1)
+        return padded
 
 
 class CubeFaceSampler:
