@@ -6,9 +6,9 @@ from numpy.typing import NDArray
 
 from .utils import (
     DType,
+    EquirecSampler,
     InterpolationMode,
     mode_to_order,
-    sample_equirec,
     uv2coor,
     xyz2uv,
     xyzpers,
@@ -71,8 +71,9 @@ def e2p(
     v = v_deg * np.pi / 180
     xyz = xyzpers(h_fov, v_fov, u, v, out_hw, in_rot)
     uv = xyz2uv(xyz)
-    coor_xy = uv2coor(uv, h, w)
+    coor_x, coor_y = uv2coor(uv, h, w)
 
-    pers_img = np.stack([sample_equirec(e_img[..., i], coor_xy, order=order) for i in range(e_img.shape[2])], axis=-1)
+    sampler = EquirecSampler(coor_x, coor_y, order)
+    pers_img = np.stack([sampler(e_img[..., i]) for i in range(e_img.shape[2])], axis=-1)
 
     return pers_img[..., 0] if squeeze else pers_img

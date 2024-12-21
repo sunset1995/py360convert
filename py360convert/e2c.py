@@ -6,12 +6,12 @@ from numpy.typing import NDArray
 from .utils import (
     CubeFormat,
     DType,
+    EquirecSampler,
     InterpolationMode,
     cube_h2dice,
     cube_h2dict,
     cube_h2list,
     mode_to_order,
-    sample_equirec,
     uv2coor,
     xyz2uv,
     xyzcube,
@@ -82,10 +82,11 @@ def e2c(
 
     xyz = xyzcube(face_w)
     uv = xyz2uv(xyz)
-    coor_xy = uv2coor(uv, h, w)
+    coor_x, coor_y = uv2coor(uv, h, w)
 
+    sampler = EquirecSampler(coor_x, coor_y, order)
     cubemap = np.stack(
-        [sample_equirec(e_img[..., i], coor_xy, order=order) for i in range(e_img.shape[2])],
+        [sampler(e_img[..., i]) for i in range(e_img.shape[2])],
         axis=-1,
         dtype=e_img.dtype,
     )

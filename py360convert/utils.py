@@ -12,7 +12,6 @@ try:
 except ImportError:
     cv2 = None
 
-
 _mode_to_order = {
     "nearest": 0,
     "linear": 1,
@@ -273,7 +272,7 @@ def uv2unitxyz(uv: NDArray[DType]) -> NDArray[DType]:
     return np.concatenate([x, y, z], axis=-1, dtype=uv.dtype)
 
 
-def uv2coor(uv: NDArray[DType], h: int, w: int) -> NDArray[DType]:
+def uv2coor(uv: NDArray[DType], h: int, w: int) -> tuple[NDArray[DType], NDArray[DType]]:
     """Transform spherical(r, u, v) into equirectangular(x, y).
 
     Assume that u has range 2pi and v has range pi.
@@ -304,8 +303,7 @@ def uv2coor(uv: NDArray[DType], h: int, w: int) -> NDArray[DType]:
     u, v = np.split(uv, 2, axis=-1)
     coor_x = (u / (2 * np.pi) + 0.5) * w - 0.5  # pyright: ignore[reportOperatorIssue]
     coor_y = (-v / np.pi + 0.5) * h - 0.5  # pyright: ignore[reportOperatorIssue]
-    out = np.concatenate([coor_x, coor_y], axis=-1, dtype=uv.dtype)
-    return out
+    return coor_x, coor_y
 
 
 def coor2uv(coorxy: NDArray[DType], h: int, w: int) -> NDArray[DType]:
@@ -315,16 +313,64 @@ def coor2uv(coorxy: NDArray[DType], h: int, w: int) -> NDArray[DType]:
     return np.concatenate([u, v], axis=-1, dtype=coorxy.dtype)
 
 
-def sample_equirec(e_img: NDArray[DType], coor_xy: NDArray, order: int) -> NDArray[DType]:
-    w = e_img.shape[1]
-    coor_x, coor_y = np.split(coor_xy, 2, axis=-1)
-    pad_u = np.roll(e_img[[0]], w // 2, 1)
-    pad_d = np.roll(e_img[[-1]], w // 2, 1)
-    e_img = np.concatenate([e_img, pad_d, pad_u], 0, dtype=e_img.dtype)
-    return map_coordinates(e_img, [coor_y, coor_x], order=order, mode="wrap")[..., 0]  # pyright: ignore[reportReturnType]
+class EquirecSampler:
+    def __init__(
+        self,
+        coor_x: NDArray,
+        coor_y: NDArray,
+        order: int,
+    ):
+        if cv2 and order in (0, 1, 3):
+            self._use_cv2 = True
+            if order == 0:
+                self._order = cv2.INTER_NEAREST
+                nninterpolation = True
+            elif order == 1:
+                self._order = cv2.INTER_LINEAR
+                nninterpolation = False
+            elif order == 3:
+                self._order = cv2.INTER_CUBIC
+                nninterpolation = False
+            else:
+                raise NotImplementedError
+
+            # TODO: I think coor_y has an off-by-one due to the 1 pixel padding?
+            self._coor_x, self._coor_y = cv2.convertMaps(
+                coor_x,
+                coor_y,
+                cv2.CV_16SC2,
+                nninterpolation=nninterpolation,
+            )
+        else:
+            self._use_cv2 = False
+            self._coor_x = coor_x
+            self._coor_y = coor_y
+            self._order = order
+
+    def __call__(self, img: NDArray[DType]) -> NDArray[DType]:
+        padded = self._pad(img)
+        if self._use_cv2:
+            out = cv2.remap(padded, self._coor_x, self._coor_y, interpolation=self._order)  # pyright: ignore
+        else:
+            out = map_coordinates(
+                padded,
+                (self._coor_y, self._coor_x),
+                order=self._order,
+                mode="wrap",
+            )[..., 0]
+
+        return out  # pyright: ignore[reportReturnType]
+
+    def _pad(self, img: NDArray[DType]) -> NDArray[DType]:
+        """Adds 1 pixel of padding above/below image."""
+        w = img.shape[1]
+        pad_u = np.roll(img[[0]], w // 2, 1)
+        pad_d = np.roll(img[[-1]], w // 2, 1)
+        img = np.concatenate([img, pad_d, pad_u], 0, dtype=img.dtype)
+        return img
 
 
-class ImageSampler2d:
+class CubeFaceSampler:
     """Arranged as a class so coordinate computations can be re-used across multiple image interpolations."""
 
     def __init__(
@@ -361,6 +407,7 @@ class ImageSampler2d:
         self._h = h
         self._w = w
         if cv2 and order in (0, 1, 3):
+            self._use_cv2 = True
             if order == 0:
                 self._order = cv2.INTER_NEAREST
                 nninterpolation = True
@@ -382,6 +429,7 @@ class ImageSampler2d:
                 nninterpolation=nninterpolation,
             )
         else:
+            self._use_cv2 = False
             self._coor_x = coor_x
             self._coor_y = coor_y
             self._order = order
@@ -406,7 +454,7 @@ class ImageSampler2d:
             raise ValueError("Input width {w} doesn't match expected height {self._w}.")
 
         padded = self._pad(cube_faces)
-        if cv2 and self._order in (0, 1, 3):
+        if self._use_cv2:
             w = padded.shape[-1]
             v_img = padded.reshape(-1, w)
             out = cv2.remap(v_img, self._coor_x, self._coor_y, interpolation=self._order)  # pyright: ignore

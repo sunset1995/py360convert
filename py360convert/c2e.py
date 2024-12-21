@@ -4,10 +4,10 @@ import numpy as np
 from numpy.typing import NDArray
 
 from .utils import (
+    CubeFaceSampler,
     CubeFormat,
     DType,
     Face,
-    ImageSampler2d,
     InterpolationMode,
     cube_dice2list,
     cube_dict2list,
@@ -163,7 +163,7 @@ def c2e(
     coor_y.clip(0, face_w, out=coor_y)
 
     equirec = np.empty((h, w, cube_faces.shape[3]), dtype=cube_faces[0].dtype)
-    sampler = ImageSampler2d(tp, coor_x, coor_y, order, face_w, face_w)
+    sampler = CubeFaceSampler(tp, coor_x, coor_y, order, face_w, face_w)
     for i in range(cube_faces.shape[3]):
         equirec[..., i] = sampler(cube_faces[..., i])
 
