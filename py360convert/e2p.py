@@ -70,8 +70,8 @@ def e2p(
     u = -u_deg * np.pi / 180
     v = v_deg * np.pi / 180
     xyz = xyzpers(h_fov, v_fov, u, v, out_hw, in_rot)
-    uv = xyz2uv(xyz)
-    coor_x, coor_y = uv2coor(uv, h, w)
+    u, v = xyz2uv(xyz)
+    coor_x, coor_y = uv2coor(u, v, h, w)
 
     sampler = EquirecSampler(coor_x, coor_y, order)
     pers_img = np.stack([sampler(e_img[..., i]) for i in range(e_img.shape[2])], axis=-1)

@@ -243,7 +243,7 @@ def xyzpers(h_fov: float, v_fov: float, u: float, v: float, out_hw: tuple[int, i
     return out.dot(Rx).dot(Ry).dot(Ri)
 
 
-def xyz2uv(xyz: NDArray[DType]) -> NDArray[DType]:
+def xyz2uv(xyz: NDArray[DType]) -> tuple[NDArray[DType], NDArray[DType]]:
     """Transform cartesian (x,y,z) to spherical(r, u, v), and only outputs (u, v).
 
     Parameters
@@ -268,10 +268,9 @@ def xyz2uv(xyz: NDArray[DType]) -> NDArray[DType]:
     """
     x, y, z = np.split(xyz, 3, axis=-1)
     u = np.arctan2(x, z)
-    c = np.sqrt(np.square(x) + np.square(z))
+    c = np.hypot(x, z)
     v = np.arctan2(y, c)
-    out = np.concatenate([u, v], axis=-1, dtype=xyz.dtype)
-    return out
+    return u, v
 
 
 def uv2unitxyz(uv: NDArray[DType]) -> NDArray[DType]:
@@ -283,7 +282,7 @@ def uv2unitxyz(uv: NDArray[DType]) -> NDArray[DType]:
     return np.concatenate([x, y, z], axis=-1, dtype=uv.dtype)
 
 
-def uv2coor(uv: NDArray[DType], h: int, w: int) -> tuple[NDArray[DType], NDArray[DType]]:
+def uv2coor(u: NDArray[DType], v: NDArray[DType], h: int, w: int) -> tuple[NDArray[DType], NDArray[DType]]:
     """Transform spherical(r, u, v) into equirectangular(x, y).
 
     Assume that u has range 2pi and v has range pi.
@@ -311,7 +310,6 @@ def uv2coor(uv: NDArray[DType], h: int, w: int) -> tuple[NDArray[DType], NDArray
         * coor_x is in [-0.5, w-0.5]
         * coor_y is in [-0.5, h-0.5]
     """
-    u, v = np.split(uv, 2, axis=-1)
     coor_x = (u / (2 * np.pi) + 0.5) * w - 0.5  # pyright: ignore[reportOperatorIssue]
     coor_y = (-v / np.pi + 0.5) * h - 0.5  # pyright: ignore[reportOperatorIssue]
     return coor_x, coor_y

@@ -81,8 +81,8 @@ def e2c(
     order = mode_to_order(mode)
 
     xyz = xyzcube(face_w)
-    uv = xyz2uv(xyz)
-    coor_x, coor_y = uv2coor(uv, h, w)
+    u, v = xyz2uv(xyz)
+    coor_x, coor_y = uv2coor(u, v, h, w)
 
     sampler = EquirecSampler(coor_x, coor_y, order)
     cubemap = np.stack(
