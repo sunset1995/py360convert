@@ -7,6 +7,12 @@ from numpy.typing import NDArray
 from scipy.ndimage import map_coordinates
 from scipy.spatial.transform import Rotation
 
+try:
+    import cv2
+except ImportError:
+    cv2 = None
+
+
 _mode_to_order = {
     "nearest": 0,
     "linear": 1,
@@ -318,6 +324,36 @@ def sample_equirec(e_img: NDArray[DType], coor_xy: NDArray, order: int) -> NDArr
     return map_coordinates(e_img, [coor_y, coor_x], order=order, mode="wrap")[..., 0]  # pyright: ignore[reportReturnType]
 
 
+def _cv2_remap(padded, tp, coor_y, coor_x, order):
+    """A much faster sampler; requires opencv (cv2) to be installed.
+
+    WARNING: coor_y is updated in place (for performance reasons)
+    """
+    if not cv2:
+        raise ValueError("opencv (cv2) must be installed to use _cv2_remap.")
+
+    # Map interpolation modes
+    if order == 0:
+        interpolation = cv2.INTER_NEAREST
+        nninterpolation = True
+    elif order == 1:
+        interpolation = cv2.INTER_LINEAR
+        nninterpolation = False
+    elif order == 3:
+        interpolation = cv2.INTER_CUBIC
+        nninterpolation = False
+    else:
+        raise ValueError
+
+    # Vertically concatenated the image and update y-coordinates so we can do a single remap operation.
+    h, w = padded.shape[-2:]
+    v_img = padded.reshape(-1, w)
+    coor_y += np.multiply(tp, h, dtype=np.float32)
+    map_1, map_2 = cv2.convertMaps(coor_x, coor_y, cv2.CV_16SC2, nninterpolation=nninterpolation)
+    out = cv2.remap(v_img, map_1, map_2, interpolation=interpolation)
+    return out
+
+
 def sample_cubefaces(
     cube_faces: NDArray[DType], tp: NDArray, coor_y: NDArray, coor_x: NDArray, order: int
 ) -> NDArray[DType]:
@@ -326,7 +362,7 @@ def sample_cubefaces(
     Parameters
     ----------
     cube_faces: numpy.ndarray
-        (6, H, W) Cube faces.
+        (6, S, S) Cube faces.
     tp: numpy.ndarray
         (H, W) facetype image from ``equirect_facetype``.
     coor_y: numpy.ndarray
@@ -335,6 +371,11 @@ def sample_cubefaces(
         (H, W) X coordinates to sample.
     order: int
         The order of the spline interpolation. See ``scipy.ndimage.map_coordinates``.
+
+    Returns
+    -------
+    numpy.ndarray
+        (H, W) Sampled image.
     """
     ABOVE = (0, slice(None))
     BELOW = (-1, slice(None))
@@ -370,7 +411,10 @@ def sample_cubefaces(
     padded[Face.DOWN][LEFT] = padded[Face.LEFT, -2, ::-1]
     padded[Face.DOWN][RIGHT] = padded[Face.RIGHT, -2, :]
 
-    return map_coordinates(padded, [tp, coor_y + 1, coor_x + 1], order=order)  # pyright: ignore[reportReturnType]
+    if cv2 and order in (0, 1, 3):
+        return _cv2_remap(padded, tp, coor_y + 1, coor_x + 1, order)
+    else:
+        return map_coordinates(padded, [tp, coor_y + 1, coor_x + 1], order=order)  # pyright: ignore[reportReturnType]
 
 
 def cube_h2list(cube_h: NDArray[DType]) -> list[NDArray[DType]]:
