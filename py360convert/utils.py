@@ -401,11 +401,15 @@ def cube_h2dict(cube_h: NDArray[DType]) -> dict[str, NDArray[DType]]:
     return dict(zip("FRBLUD", cube_h2list(cube_h)))
 
 
-def cube_dict2h(cube_dict: dict[Any, NDArray[DType]], face_k: Optional[Sequence] = None) -> NDArray[DType]:
+def cube_dict2list(cube_dict: dict[Any, NDArray[DType]], face_k: Optional[Sequence] = None) -> list[NDArray[DType]]:
     face_k = face_k or "FRBLUD"
     if len(face_k) != 6:
         raise ValueError(f"6 face_k keys must be provided to construct a cube; got {len(face_k)}.")
-    return cube_list2h([cube_dict[k] for k in face_k])
+    return [cube_dict[k] for k in face_k]
+
+
+def cube_dict2h(cube_dict: dict[Any, NDArray[DType]], face_k: Optional[Sequence] = None) -> NDArray[DType]:
+    return cube_list2h(cube_dict2list(cube_dict, face_k))
 
 
 def cube_h2dice(cube_h: NDArray[DType]) -> NDArray[DType]:
@@ -426,6 +430,27 @@ def cube_h2dice(cube_h: NDArray[DType]) -> NDArray[DType]:
     for (sx, sy), face in zip(sxy, cube_list):
         cube_dice[slice_chunk(sy, w), slice_chunk(sx, w)] = face
     return cube_dice
+
+
+def cube_dice2list(cube_dice: NDArray[DType]) -> list[NDArray[DType]]:
+    if cube_dice.shape[0] % 3 != 0:
+        raise ValueError("Dice image height must be a multiple of 3.")
+    w = cube_dice.shape[0] // 3
+    if cube_dice.shape[1] != w * 4:
+        raise ValueError(f'Dice width must be 4 "faces" (4x{w}={4*w}) wide.')
+    # Order: F R B L U D
+    #        ┌────┐
+    #        │ U  │
+    #   ┌────┼────┼────┬────┐
+    #   │ L  │ F  │ R  │ B  │
+    #   └────┼────┼────┴────┘
+    #        │ D  │
+    #        └────┘
+    out = []
+    sxy = [(1, 1), (2, 1), (3, 1), (0, 1), (1, 0), (1, 2)]
+    for sx, sy in sxy:
+        out.append(cube_dice[slice_chunk(sy, w), slice_chunk(sx, w)])
+    return out
 
 
 def cube_dice2h(cube_dice: NDArray[DType]) -> NDArray[DType]:

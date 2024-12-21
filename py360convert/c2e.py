@@ -8,7 +8,10 @@ from .utils import (
     DType,
     InterpolationMode,
     cube_dice2h,
+    cube_dice2list,
     cube_dict2h,
+    cube_dict2list,
+    cube_h2list,
     cube_list2h,
     equirect_facetype,
     equirect_uvgrid,
@@ -74,6 +77,8 @@ def c2e(
         Equirectangular image.
     """
     order = mode_to_order(mode)
+    if w % 8 != 0:
+        raise ValueError("w must be a multiple of 8.")
 
     if cube_format == "horizon":
         if not isinstance(cubemap, np.ndarray):
@@ -83,17 +88,18 @@ def c2e(
             squeeze = True
         else:
             squeeze = False
+        cube_faces = cube_h2list(cubemap)
     elif cube_format == "list":
         if not isinstance(cubemap, list):
             raise TypeError('cubemap must be a list for cube_format="list"')
         if len({x.shape for x in cubemap}) != 1:
             raise ValueError("All cubemap elements must have same shape")
         if cubemap[0].ndim == 2:
-            cubemap = [x[..., None] for x in cubemap]
+            cube_faces = [x[..., None] for x in cubemap]
             squeeze = True
         else:
+            cube_faces = cubemap
             squeeze = False
-        cubemap = cube_list2h(cubemap)
     elif cube_format == "dict":
         if not isinstance(cubemap, dict):
             raise TypeError('cubemap must be a dict for cube_format="dict"')
@@ -104,7 +110,7 @@ def c2e(
             squeeze = True
         else:
             squeeze = False
-        cubemap = cube_dict2h(cubemap)
+        cube_faces = cube_dict2list(cubemap)
     elif cube_format == "dice":
         if not isinstance(cubemap, np.ndarray):
             raise TypeError('cubemap must be a numpy array for cube_format="dice"')
@@ -113,21 +119,17 @@ def c2e(
             squeeze = True
         else:
             squeeze = False
-        cubemap = cube_dice2h(cubemap)
+        cube_faces = cube_dice2list(cubemap)
     else:
         raise ValueError('Unknown cube_format "{cube_format}".')
 
-    if cubemap.ndim != 3:
-        raise ValueError(f"Cubemap must have 2 or 3 dimensions; got {cubemap.ndim}.")
+    cube_faces = np.stack(cube_faces)
 
-    if cubemap.shape[0] * 6 != cubemap.shape[1]:
-        raise ValueError("Cubemap's width must by 6x its height.")
-    if w % 8 != 0:
-        raise ValueError("w must be a multiple of 8.")
-    face_w = cubemap.shape[0]
+    if cube_faces.shape[1] != cube_faces.shape[2]:
+        raise ValueError("Cubemap faces must be square.")
+    face_w = cube_faces.shape[2]
 
     u, v = equirect_uvgrid(h, w)
-    cube_faces = np.stack(np.split(cubemap, 6, 1), 0)
 
     # Get face id to each pixel: 0F 1R 2B 3L 4U 5D
     tp = equirect_facetype(h, w)
