@@ -132,11 +132,10 @@ def xyzcube(face_w: int) -> NDArray[np.float32]:
     return out
 
 
-def equirect_uvgrid(h: int, w: int) -> NDArray[np.float32]:
+def equirect_uvgrid(h: int, w: int) -> tuple[NDArray[np.float32], NDArray[np.float32]]:
     u = np.linspace(-np.pi, np.pi, num=w, dtype=np.float32)
-    v = np.linspace(np.pi, -np.pi, num=h, dtype=np.float32) / 2
-
-    return np.stack(np.meshgrid(u, v), axis=-1)
+    v = np.linspace(np.pi / 2, -np.pi / 2, num=h, dtype=np.float32)
+    return np.meshgrid(u, v)  # pyright: ignore[reportReturnType]
 
 
 def equirect_facetype(h: int, w: int) -> NDArray[np.int32]:

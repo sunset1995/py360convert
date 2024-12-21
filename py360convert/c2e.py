@@ -126,10 +126,7 @@ def c2e(
         raise ValueError("w must be a multiple of 8.")
     face_w = cubemap.shape[0]
 
-    uv = equirect_uvgrid(h, w)
-    u, v = np.split(uv, 2, axis=-1)
-    u = u[..., 0]
-    v = v[..., 0]
+    u, v = equirect_uvgrid(h, w)
     cube_faces = np.stack(np.split(cubemap, 6, 1), 0)
 
     # Get face id to each pixel: 0F 1R 2B 3L 4U 5D
