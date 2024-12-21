@@ -13,6 +13,7 @@ def diff(x, y):
 
 def test_c2e_dice(equirec_image, dice_image):
     equirec_actual = py360convert.c2e(dice_image, 512, 1024)
+    assert equirec_actual.dtype == dice_image.dtype
     equirec_diff = diff(equirec_image, equirec_actual)
     assert equirec_diff.mean() < AVG_DIFF_THRESH
 

@@ -75,8 +75,8 @@ def mode_to_order(mode: InterpolationMode) -> int:
         raise ValueError(f'Unknown mode "{mode}".') from None
 
 
-def slice_chunk(index: int, width: int):
-    start = index * width
+def slice_chunk(index: int, width: int, offset=0):
+    start = index * width + offset
     return slice(start, start + width)
 
 
@@ -180,22 +180,37 @@ def equirect_facetype(h: int, w: int) -> NDArray[np.int32]:
     if w % 4:
         raise ValueError(f"w must be a multiple of 4. Got {w}.")
 
-    tp = np.roll(np.arange(4).repeat(w // 4)[None, :].repeat(h, 0), 3 * w // 8, 1)
+    # Create the pattern [2,3,3,0,0,1,1,2]
+    w4 = w // 4
+    w8 = w // 8
+    h3 = h // 3
+    tp = np.empty((h, w), dtype=np.int32)
+    tp[:, :w8] = 2
+    tp[:, w8 : w8 + w4] = 3
+    tp[:, w8 + w4 : w8 + 2 * w4] = 0
+    tp[:, w8 + 2 * w4 : w8 + 3 * w4] = 1
+    tp[:, w8 + 3 * w4 :] = 2
 
     # Prepare ceil mask
-    mask = np.zeros((h, w // 4), np.bool_)
-    idx = np.linspace(-np.pi, np.pi, w // 4) / 4
+    idx = np.linspace(-np.pi, np.pi, w4) / 4
     idx = np.round(h / 2 - np.arctan(np.cos(idx)) * h / np.pi).astype(np.int32)
+    # It'll never go past a third of the image, so only process that for optimization
+    mask = np.empty((h3, w4), np.bool_)
+    row_idx = np.arange(h3, dtype=np.int32)[:, None]
+    np.less(row_idx, idx[None], out=mask)
 
-    row_idx = np.arange(len(mask))[:, None]
-    mask[row_idx < idx[None, :]] = True
+    flip_mask = np.flip(mask, 0)
+    tp[:h3, :w8][mask[:, w8:]] = Face.UP
+    tp[-h3:, :w8][flip_mask[:, w8:]] = Face.DOWN
+    for i in range(3):
+        s = slice_chunk(i, w4, w8)
+        tp[:h3, s][mask] = Face.UP
+        tp[-h3:, s][flip_mask] = Face.DOWN
+    remainder = w - s.stop  # pyright: ignore[reportPossiblyUnboundVariable]
+    tp[:h3, s.stop :][mask[:, :remainder]] = Face.UP  # pyright: ignore[reportPossiblyUnboundVariable]
+    tp[-h3:, s.stop :][flip_mask[:, :remainder]] = Face.DOWN  # pyright: ignore[reportPossiblyUnboundVariable]
 
-    mask = np.roll(np.tile(mask, (1, 4)), 3 * w // 8, 1)
-
-    tp[mask] = Face.UP
-    tp[np.flip(mask, 0)] = Face.DOWN
-
-    return tp.astype(np.int32)
+    return tp
 
 
 def xyzpers(h_fov: float, v_fov: float, u: float, v: float, out_hw: tuple[int, int], in_rot: float) -> NDArray:
