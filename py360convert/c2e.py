@@ -132,8 +132,8 @@ def c2e(
     # Get face id to each pixel: 0F 1R 2B 3L 4U 5D
     tp = equirect_facetype(h, w)
 
-    coor_x = np.empty((h, w))
-    coor_y = np.empty((h, w))
+    coor_x = np.empty((h, w), dtype=np.float32)
+    coor_y = np.empty((h, w), dtype=np.float32)
     face_w2 = face_w / 2
 
     # Middle band (front/right/back/left)

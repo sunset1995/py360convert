@@ -340,7 +340,7 @@ def sample_cubefaces(
     BELOW = (-1, slice(None))
     LEFT = (slice(None), 0)
     RIGHT = (slice(None), -1)
-    padded = np.pad(cube_faces, ((0, 0), (1, 1), (1, 1)), mode="constant")
+    padded = np.pad(cube_faces, ((0, 0), (1, 1), (1, 1)), mode="empty")
 
     # Pad above/below
     padded[Face.FRONT][ABOVE] = padded[Face.UP, -2, :]
