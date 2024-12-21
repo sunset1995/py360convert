@@ -8,7 +8,7 @@ from scipy.ndimage import map_coordinates
 from scipy.spatial.transform import Rotation
 
 try:
-    import cv2
+    import cv2  # pyright: ignore[reportMissingImports]
 except ImportError:
     cv2 = None
 
