@@ -1,5 +1,6 @@
 from collections.abc import Sequence
 from enum import IntEnum
+from functools import cache
 from typing import Any, Literal, Optional, TypeVar, Union
 
 import numpy as np
@@ -80,11 +81,13 @@ def mode_to_order(mode: InterpolationMode) -> int:
         raise ValueError(f'Unknown mode "{mode}".') from None
 
 
+@cache
 def slice_chunk(index: int, width: int, offset=0):
     start = index * width + offset
     return slice(start, start + width)
 
 
+@cache
 def xyzcube(face_w: int) -> NDArray[np.float32]:
     """
     Return the xyz coordinates of the unit cube in [F R B L U D] format.
@@ -148,12 +151,14 @@ def xyzcube(face_w: int) -> NDArray[np.float32]:
     return out
 
 
+@cache
 def equirect_uvgrid(h: int, w: int) -> tuple[NDArray[np.float32], NDArray[np.float32]]:
     u = np.linspace(-np.pi, np.pi, num=w, dtype=np.float32)
     v = np.linspace(np.pi / 2, -np.pi / 2, num=h, dtype=np.float32)
     return np.meshgrid(u, v)  # pyright: ignore[reportReturnType]
 
 
+@cache
 def equirect_facetype(h: int, w: int) -> NDArray[np.int32]:
     """Generate a 2D equirectangular segmentation image for each facetype.
 
