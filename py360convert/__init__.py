@@ -11,6 +11,7 @@ __all__ = [
     "utils",
 ]
 
+from py360convert.version import __version__
 from . import utils
 from .c2e import c2e
 from .e2c import e2c
