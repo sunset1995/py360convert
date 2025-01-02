@@ -1,6 +1,6 @@
 from collections.abc import Sequence
 from enum import IntEnum
-from functools import cache
+from functools import lru_cache
 from typing import Any, Literal, Optional, TypeVar, Union
 
 import numpy as np
@@ -44,6 +44,7 @@ InterpolationMode = Literal[
     "quintic",
 ]
 DType = TypeVar("DType", bound=np.generic, covariant=True)
+_CACHE_SIZE = 8
 
 
 class Face(IntEnum):
@@ -81,13 +82,12 @@ def mode_to_order(mode: InterpolationMode) -> int:
         raise ValueError(f'Unknown mode "{mode}".') from None
 
 
-@cache
 def slice_chunk(index: int, width: int, offset=0):
     start = index * width + offset
     return slice(start, start + width)
 
 
-@cache
+@lru_cache(_CACHE_SIZE)
 def xyzcube(face_w: int) -> NDArray[np.float32]:
     """
     Return the xyz coordinates of the unit cube in [F R B L U D] format.
@@ -148,17 +148,23 @@ def xyzcube(face_w: int) -> NDArray[np.float32]:
     out[:, face_slice(Face.DOWN), Dim.Y] = -0.5
     out[:, face_slice(Face.DOWN), Dim.Z] = y
 
+    # Since we are using lru_cache, we want the return value to be immutable.
+    out.setflags(write=False)
     return out
 
 
-@cache
+@lru_cache(_CACHE_SIZE)
 def equirect_uvgrid(h: int, w: int) -> tuple[NDArray[np.float32], NDArray[np.float32]]:
     u = np.linspace(-np.pi, np.pi, num=w, dtype=np.float32)
     v = np.linspace(np.pi / 2, -np.pi / 2, num=h, dtype=np.float32)
-    return np.meshgrid(u, v)  # pyright: ignore[reportReturnType]
+    uu, vv = np.meshgrid(u, v)
+    # Since we are using lru_cache, we want the return value to be immutable.
+    uu.setflags(write=False)
+    vv.setflags(write=False)
+    return uu, vv  # pyright: ignore[reportReturnType]
 
 
-@cache
+@lru_cache(_CACHE_SIZE)
 def equirect_facetype(h: int, w: int) -> NDArray[np.int32]:
     """Generate a 2D equirectangular segmentation image for each facetype.
 
@@ -229,6 +235,9 @@ def equirect_facetype(h: int, w: int) -> NDArray[np.int32]:
     remainder = w - s.stop  # pyright: ignore[reportPossiblyUnboundVariable]
     tp[:h3, s.stop :][mask[:, :remainder]] = Face.UP  # pyright: ignore[reportPossiblyUnboundVariable]
     tp[-h3:, s.stop :][flip_mask[:, :remainder]] = Face.DOWN  # pyright: ignore[reportPossiblyUnboundVariable]
+
+    # Since we are using lru_cache, we want the return value to be immutable.
+    tp.setflags(write=False)
 
     return tp
 
