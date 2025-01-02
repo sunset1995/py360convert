@@ -12,9 +12,6 @@ from .utils import (
     cube_h2dict,
     cube_h2list,
     mode_to_order,
-    uv2coor,
-    xyz2uv,
-    xyzcube,
 )
 
 

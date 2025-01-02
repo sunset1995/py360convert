@@ -7,13 +7,10 @@ from .utils import (
     CubeFaceSampler,
     CubeFormat,
     DType,
-    Face,
     InterpolationMode,
     cube_dice2list,
     cube_dict2list,
     cube_h2list,
-    equirect_facetype,
-    equirect_uvgrid,
     mode_to_order,
 )
 
@@ -127,43 +124,9 @@ def c2e(
         raise ValueError("Cubemap faces must be square.")
     face_w = cube_faces.shape[2]
 
-    u, v = equirect_uvgrid(h, w)
-
-    # Get face id to each pixel: 0F 1R 2B 3L 4U 5D
-    tp = equirect_facetype(h, w)
-
-    coor_x = np.empty((h, w), dtype=np.float32)
-    coor_y = np.empty((h, w), dtype=np.float32)
-    face_w2 = face_w / 2
-
-    # Middle band (front/right/back/left)
-    mask = tp < Face.UP
-    angles = u[mask] - (np.pi / 2 * tp[mask])
-    tan_angles = np.tan(angles)
-    cos_angles = np.cos(angles)
-    tan_v = np.tan(v[mask])
-
-    coor_x[mask] = face_w2 * tan_angles
-    coor_y[mask] = -face_w2 * tan_v / cos_angles
-
-    mask = tp == Face.UP
-    c = face_w2 * np.tan(np.pi / 2 - v[mask])
-    coor_x[mask] = c * np.sin(u[mask])
-    coor_y[mask] = c * np.cos(u[mask])
-
-    mask = tp == Face.DOWN
-    c = face_w2 * np.tan(np.pi / 2 - np.abs(v[mask]))
-    coor_x[mask] = c * np.sin(u[mask])
-    coor_y[mask] = -c * np.cos(u[mask])
-
-    # Final renormalize
-    coor_x += face_w2
-    coor_y += face_w2
-    coor_x.clip(0, face_w, out=coor_x)
-    coor_y.clip(0, face_w, out=coor_y)
+    sampler = CubeFaceSampler.from_equirec(face_w, h, w, order)
 
     equirec = np.empty((h, w, cube_faces.shape[3]), dtype=cube_faces[0].dtype)
-    sampler = CubeFaceSampler(tp, coor_x, coor_y, order, face_w, face_w)
     for i in range(cube_faces.shape[3]):
         equirec[..., i] = sampler(cube_faces[..., i])
 

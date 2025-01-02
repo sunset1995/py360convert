@@ -9,9 +9,6 @@ from .utils import (
     EquirecSampler,
     InterpolationMode,
     mode_to_order,
-    uv2coor,
-    xyz2uv,
-    xyzpers,
 )
 
 
