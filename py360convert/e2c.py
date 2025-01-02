@@ -12,9 +12,6 @@ from .utils import (
     cube_h2dict,
     cube_h2list,
     mode_to_order,
-    uv2coor,
-    xyz2uv,
-    xyzcube,
 )
 
 
@@ -79,12 +76,7 @@ def e2c(
 
     h, w = e_img.shape[:2]
     order = mode_to_order(mode)
-
-    xyz = xyzcube(face_w)
-    u, v = xyz2uv(xyz)
-    coor_x, coor_y = uv2coor(u, v, h, w)
-
-    sampler = EquirecSampler(coor_x, coor_y, order)
+    sampler = EquirecSampler.from_cubemap(face_w, h, w, order)
     cubemap = np.stack(
         [sampler(e_img[..., i]) for i in range(e_img.shape[2])],
         axis=-1,

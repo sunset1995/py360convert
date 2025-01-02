@@ -1,5 +1,6 @@
 from collections.abc import Sequence
 from enum import IntEnum
+from functools import lru_cache
 from typing import Any, Literal, Optional, TypeVar, Union
 
 import numpy as np
@@ -43,6 +44,7 @@ InterpolationMode = Literal[
     "quintic",
 ]
 DType = TypeVar("DType", bound=np.generic, covariant=True)
+_CACHE_SIZE = 8
 
 
 class Face(IntEnum):
@@ -85,6 +87,7 @@ def slice_chunk(index: int, width: int, offset=0):
     return slice(start, start + width)
 
 
+@lru_cache(_CACHE_SIZE)
 def xyzcube(face_w: int) -> NDArray[np.float32]:
     """
     Return the xyz coordinates of the unit cube in [F R B L U D] format.
@@ -145,15 +148,23 @@ def xyzcube(face_w: int) -> NDArray[np.float32]:
     out[:, face_slice(Face.DOWN), Dim.Y] = -0.5
     out[:, face_slice(Face.DOWN), Dim.Z] = y
 
+    # Since we are using lru_cache, we want the return value to be immutable.
+    out.setflags(write=False)
     return out
 
 
+@lru_cache(_CACHE_SIZE)
 def equirect_uvgrid(h: int, w: int) -> tuple[NDArray[np.float32], NDArray[np.float32]]:
     u = np.linspace(-np.pi, np.pi, num=w, dtype=np.float32)
     v = np.linspace(np.pi / 2, -np.pi / 2, num=h, dtype=np.float32)
-    return np.meshgrid(u, v)  # pyright: ignore[reportReturnType]
+    uu, vv = np.meshgrid(u, v)
+    # Since we are using lru_cache, we want the return value to be immutable.
+    uu.setflags(write=False)
+    vv.setflags(write=False)
+    return uu, vv  # pyright: ignore[reportReturnType]
 
 
+@lru_cache(_CACHE_SIZE)
 def equirect_facetype(h: int, w: int) -> NDArray[np.int32]:
     """Generate a 2D equirectangular segmentation image for each facetype.
 
@@ -225,10 +236,15 @@ def equirect_facetype(h: int, w: int) -> NDArray[np.int32]:
     tp[:h3, s.stop :][mask[:, :remainder]] = Face.UP  # pyright: ignore[reportPossiblyUnboundVariable]
     tp[-h3:, s.stop :][flip_mask[:, :remainder]] = Face.DOWN  # pyright: ignore[reportPossiblyUnboundVariable]
 
+    # Since we are using lru_cache, we want the return value to be immutable.
+    tp.setflags(write=False)
+
     return tp
 
 
-def xyzpers(h_fov: float, v_fov: float, u: float, v: float, out_hw: tuple[int, int], in_rot: float) -> NDArray:
+def xyzpers(
+    h_fov: float, v_fov: float, u: float, v: float, out_hw: tuple[int, int], in_rot: float
+) -> NDArray[np.float32]:
     out = np.ones((*out_hw, 3), np.float32)
 
     x_max = np.tan(h_fov / 2)
@@ -240,7 +256,7 @@ def xyzpers(h_fov: float, v_fov: float, u: float, v: float, out_hw: tuple[int, i
     Ry = rotation_matrix(u, Dim.Y)
     Ri = rotation_matrix(in_rot, np.array([0, 0, 1.0]).dot(Rx).dot(Ry))
 
-    return out.dot(Rx).dot(Ry).dot(Ri)
+    return out.dot(Rx).dot(Ry).dot(Ri).astype(np.float32)
 
 
 def xyz2uv(xyz: NDArray[DType]) -> tuple[NDArray[DType], NDArray[DType]]:
@@ -380,6 +396,56 @@ class EquirecSampler:
         padded[-1, :] = np.roll(img[[-1]], w // 2, 1)
         return padded
 
+    @classmethod
+    @lru_cache(_CACHE_SIZE)
+    def from_cubemap(cls, face_w: int, h: int, w: int, order: int):
+        """Construct a EquirecSampler from cubemap specs.
+
+        Parameters
+        ----------
+        face_w: int
+            Length of each face of the output cubemap.
+        h: int
+            Height of input equirec image.
+        w: int
+            Width of input equirec image.
+        order: int
+            The order of the spline interpolation. See ``scipy.ndimage.map_coordinates``.
+        """
+        xyz = xyzcube(face_w)
+        u, v = xyz2uv(xyz)
+        coor_x, coor_y = uv2coor(u, v, h, w)
+        return cls(coor_x, coor_y, order=order)
+
+    @classmethod
+    @lru_cache(_CACHE_SIZE)
+    def from_perspective(cls, h_fov: float, v_fov: float, u, v, in_rot: float, h: int, w: int, order: int):
+        """Construct a EquirecSampler from perspective specs.
+
+        Parameters
+        ----------
+        h_fov: float
+            Horizontal field of view in radians.
+        v_fov: float
+            Horizontal field of view in radians.
+        u: float
+            Horizontal viewing angle in radians
+        v: float
+            Vertical viewing angle in radians
+        in_rot: float
+            Inplane rotation in radians.
+        h: int
+            Height of input equirec image.
+        w: int
+            Width of input equirec image.
+        order: int
+            The order of the spline interpolation. See ``scipy.ndimage.map_coordinates``.
+        """
+        xyz = xyzpers(h_fov, v_fov, u, v, (h, w), in_rot)
+        u, v = xyz2uv(xyz)
+        coor_x, coor_y = uv2coor(u, v, h, w)
+        return cls(coor_x, coor_y, order=order)
+
 
 class CubeFaceSampler:
     """Arranged as a class so coordinate computations can be re-used across multiple image interpolations."""
@@ -510,6 +576,59 @@ class CubeFaceSampler:
         padded[Face.DOWN][RIGHT] = padded[Face.RIGHT, -2, :]
 
         return padded
+
+    @classmethod
+    @lru_cache(_CACHE_SIZE)
+    def from_equirec(cls, face_w: int, h: int, w: int, order: int):
+        """Construct a CubemapSampler from equirectangular specs.
+
+        Parameters
+        ----------
+        face_w: int
+            Length of each face of the input cubemap.
+        h: int
+            Output equirectangular image height.
+        w: int
+            Output equirectangular image width.
+        order: int
+            The order of the spline interpolation. See ``scipy.ndimage.map_coordinates``.
+        """
+        u, v = equirect_uvgrid(h, w)
+
+        # Get face id to each pixel: 0F 1R 2B 3L 4U 5D
+        tp = equirect_facetype(h, w)
+
+        coor_x = np.empty((h, w), dtype=np.float32)
+        coor_y = np.empty((h, w), dtype=np.float32)
+        face_w2 = face_w / 2
+
+        # Middle band (front/right/back/left)
+        mask = tp < Face.UP
+        angles = u[mask] - (np.pi / 2 * tp[mask])
+        tan_angles = np.tan(angles)
+        cos_angles = np.cos(angles)
+        tan_v = np.tan(v[mask])
+
+        coor_x[mask] = face_w2 * tan_angles
+        coor_y[mask] = -face_w2 * tan_v / cos_angles
+
+        mask = tp == Face.UP
+        c = face_w2 * np.tan(np.pi / 2 - v[mask])
+        coor_x[mask] = c * np.sin(u[mask])
+        coor_y[mask] = c * np.cos(u[mask])
+
+        mask = tp == Face.DOWN
+        c = face_w2 * np.tan(np.pi / 2 - np.abs(v[mask]))
+        coor_x[mask] = c * np.sin(u[mask])
+        coor_y[mask] = -c * np.cos(u[mask])
+
+        # Final renormalize
+        coor_x += face_w2
+        coor_y += face_w2
+        coor_x.clip(0, face_w, out=coor_x)
+        coor_y.clip(0, face_w, out=coor_y)
+
+        return cls(tp, coor_x, coor_y, order, face_w, face_w)
 
 
 def cube_h2list(cube_h: NDArray[DType]) -> list[NDArray[DType]]:
