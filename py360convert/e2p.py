@@ -14,7 +14,7 @@ from .utils import (
 
 def e2p(
     e_img: NDArray[DType],
-    fov_deg: Union[Real, tuple[float, float]],
+    fov_deg: Union[float, int, tuple[float | int, float | int]],
     u_deg: float,
     v_deg: float,
     out_hw: tuple[int, int],
@@ -55,10 +55,10 @@ def e2p(
 
     h, w = e_img.shape[:2]
 
-    if isinstance(fov_deg, Real):
+    if isinstance(fov_deg, (int, float, Real)):
         h_fov = v_fov = float(np.deg2rad(float(fov_deg)))
     else:
-        h_fov, v_fov = map(np.deg2rad, fov_deg)
+        h_fov, v_fov = float(np.deg2rad(fov_deg[0])), float(np.deg2rad(fov_deg[1]))
 
     order = mode_to_order(mode)
 
