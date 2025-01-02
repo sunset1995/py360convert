@@ -59,11 +59,12 @@ jobs:
       - name: Build package
         run: poetry build
 
-      - name: Publish package
-        if: github.event_name != 'workflow_dispatch'
-        run: |
-          poetry config pypi-token.pypi ${{ secrets.PYPI_TOKEN }}
-          poetry publish
+      # Disable publishing until we are given admin permissions to add pypi api-key to github actions.
+      # - name: Publish package
+      #   if: github.event_name != 'workflow_dispatch'
+      #   run: |
+      #     poetry config pypi-token.pypi ${{ secrets.PYPI_TOKEN }}
+      #     poetry publish
 
       - uses: actions/upload-artifact@v4
         if: always()
