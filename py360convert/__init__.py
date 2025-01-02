@@ -1,4 +1,8 @@
+# Don't manually change version, let poetry-dynamic-versioning handle it.
+__version__ = "0.0.0"
+
 __all__ = [
+    "__version__",
     "c2e",
     "cube_dice2h",
     "cube_dict2h",

@@ -147,6 +147,5 @@ paths=["py360convert"]
 deps-file="pyproject.toml"
 sections=["tool.poetry.dependencies"]
 exclude-deps =[
-  "rich",
   "typing-extensions",
 ]
