@@ -59,21 +59,16 @@ def e2p(
     h, w = e_img.shape[:2]
 
     if isinstance(fov_deg, Real):
-        h_fov = v_fov = np.deg2rad(float(fov_deg))
+        h_fov = v_fov = float(np.deg2rad(float(fov_deg)))
     else:
         h_fov, v_fov = map(np.deg2rad, fov_deg)
 
-    in_rot = np.deg2rad(in_rot_deg)
-
     order = mode_to_order(mode)
 
-    u = -u_deg * np.pi / 180
-    v = v_deg * np.pi / 180
-    xyz = xyzpers(h_fov, v_fov, u, v, out_hw, in_rot)
-    u, v = xyz2uv(xyz)
-    coor_x, coor_y = uv2coor(u, v, h, w)
-
-    sampler = EquirecSampler(coor_x, coor_y, order)
+    u = -float(np.deg2rad(u_deg))
+    v = float(np.deg2rad(v_deg))
+    in_rot = float(np.deg2rad(in_rot_deg))
+    sampler = EquirecSampler.from_perspective(h_fov, v_fov, u, v, in_rot, h, w, order)
     pers_img = np.stack([sampler(e_img[..., i]) for i in range(e_img.shape[2])], axis=-1)
 
     return pers_img[..., 0] if squeeze else pers_img
