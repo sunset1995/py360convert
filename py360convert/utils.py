@@ -378,7 +378,19 @@ class EquirecSampler:
     def __call__(self, img: NDArray[DType]) -> NDArray[DType]:
         padded = self._pad(img)
         if self._use_cv2:
+            if padded.dtype == np.float16:
+                source_dtype = np.float16
+            else:
+                source_dtype = None
+
+            if source_dtype:
+                padded = padded.astype(np.float32)
+
+            # cv2.remap can handle uint8, float32, float64
             out = cv2.remap(padded, self._coor_x, self._coor_y, interpolation=self._order)  # pyright: ignore
+
+            if source_dtype:
+                out = out.astype(source_dtype)
         else:
             out = map_coordinates(
                 padded,
@@ -532,9 +544,22 @@ class CubeFaceSampler:
 
         padded = self._pad(cube_faces)
         if self._use_cv2:
+            if padded.dtype == np.float16:
+                source_dtype = np.float16
+            else:
+                source_dtype = None
+
+            if source_dtype:
+                padded = padded.astype(np.float32)
+
             w = padded.shape[-1]
             v_img = padded.reshape(-1, w)
+
+            # cv2.remap can handle uint8, float32, float64
             out = cv2.remap(v_img, self._coor_x, self._coor_y, interpolation=self._order)  # pyright: ignore
+
+            if source_dtype:
+                out = out.astype(source_dtype)
         else:
             out = map_coordinates(padded, (self._tp, self._coor_y, self._coor_x), order=self._order)
         return out  # pyright: ignore[reportReturnType]
