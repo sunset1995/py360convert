@@ -431,7 +431,9 @@ class EquirecSampler:
 
     @classmethod
     @lru_cache(_CACHE_SIZE)
-    def from_perspective(cls, h_fov: float, v_fov: float, u, v, in_rot: float, h: int, w: int, order: int):
+    def from_perspective(
+        cls, h_fov: float, v_fov: float, u, v, in_rot: float, in_h: int, in_w: int, out_h, out_w, order: int
+    ):
         """Construct a EquirecSampler from perspective specs.
 
         Parameters
@@ -446,16 +448,20 @@ class EquirecSampler:
             Vertical viewing angle in radians
         in_rot: float
             Inplane rotation in radians.
-        h: int
+        in_h: int
             Height of input equirec image.
-        w: int
+        in_w: int
             Width of input equirec image.
+        out_h: int
+            Height of output perspective image.
+        out_w: int
+            Width of output perspective image.
         order: int
             The order of the spline interpolation. See ``scipy.ndimage.map_coordinates``.
         """
-        xyz = xyzpers(h_fov, v_fov, u, v, (h, w), in_rot)
+        xyz = xyzpers(h_fov, v_fov, u, v, (out_h, out_w), in_rot)
         u, v = xyz2uv(xyz)
-        coor_x, coor_y = uv2coor(u, v, h, w)
+        coor_x, coor_y = uv2coor(u, v, in_h, in_w)
         return cls(coor_x, coor_y, order=order)
 
 

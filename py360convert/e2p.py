@@ -14,7 +14,7 @@ from .utils import (
 
 def e2p(
     e_img: NDArray[DType],
-    fov_deg: Union[float, int, tuple[float | int, float | int]],
+    fov_deg: Union[float, int, tuple[Union[float, int], Union[float, int]]],
     u_deg: float,
     v_deg: float,
     out_hw: tuple[int, int],
@@ -65,7 +65,18 @@ def e2p(
     u = -float(np.deg2rad(u_deg))
     v = float(np.deg2rad(v_deg))
     in_rot = float(np.deg2rad(in_rot_deg))
-    sampler = EquirecSampler.from_perspective(h_fov, v_fov, u, v, in_rot, h, w, order)
+    sampler = EquirecSampler.from_perspective(
+        h_fov,
+        v_fov,
+        u,
+        v,
+        in_rot,
+        h,
+        w,
+        out_hw[0],
+        out_hw[0],
+        order,
+    )
     pers_img = np.stack([sampler(e_img[..., i]) for i in range(e_img.shape[2])], axis=-1)
 
     return pers_img[..., 0] if squeeze else pers_img
