@@ -102,6 +102,7 @@ ignore = [
     "E501",
     "F401",
     "N806",
+    "SIM108",  # Use ternary operator
     "PGH003",  # Use specific rule codes when ignoring type issues
     "TRY003",  # Avoid specifying messages outside exception class; overly strict, especially for ValueError
 ]

@@ -124,3 +124,24 @@ def test_e2c_list_mono(equirec_image_mono, list_image_mono):
     assert list_diff[3].mean() < AVG_DIFF_THRESH
     assert list_diff[4].mean() < AVG_DIFF_THRESH
     assert list_diff[5].mean() < AVG_DIFF_THRESH
+
+
+@pytest.mark.parametrize("dtype", [np.float16, np.float32, np.float64])
+def test_e2c_dtype(equirec_image, dtype):
+    equirec_image = equirec_image.astype(dtype)
+    actual = py360convert.e2c(equirec_image, cube_format="horizon")
+    assert actual.dtype == dtype
+
+
+@pytest.mark.parametrize("dtype", [np.float16, np.float32, np.float64])
+def test_e2p_dtype(equirec_image, dtype):
+    equirec_image = equirec_image.astype(dtype)
+    actual = py360convert.e2p(equirec_image, 90, 50, 120, (512, 512))
+    assert actual.dtype == dtype
+
+
+@pytest.mark.parametrize("dtype", [np.float16, np.float32, np.float64])
+def test_c2e_dtype(dice_image, dtype):
+    dice_image = dice_image.astype(dtype)
+    actual = py360convert.c2e(dice_image, 512, 1024, cube_format="dice")
+    assert actual.dtype == dtype
