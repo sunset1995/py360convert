@@ -74,7 +74,7 @@ def e2p(
         h,
         w,
         out_hw[0],
-        out_hw[0],
+        out_hw[1],
         order,
     )
     pers_img = np.stack([sampler(e_img[..., i]) for i in range(e_img.shape[2])], axis=-1)
