@@ -403,7 +403,7 @@ class EquirecSampler:
         return out  # pyright: ignore[reportReturnType]
 
     def _pad(self, img: NDArray[DType]) -> NDArray[DType]:
-        """Adds 1 pixel of padding above/below image."""
+        """Adds 1 pixel of padding around entire image."""
         w = img.shape[1]
         padded = np.pad(img, ((1, 1), (1, 1)), mode="empty")
         padded[0, 1:-1] = np.roll(img[[0]], w // 2, axis=1)
