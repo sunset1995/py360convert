@@ -347,7 +347,8 @@ class EquirecSampler:
         coor_y: NDArray,
         order: int,
     ):
-        # Add 1 to the coordinates to compensate for the 1 pixel upper padding.
+        # Add 1 to the coordinates to compensate for the 1 pixel padding.
+        coor_x = coor_x + 1  # Not done inplace on purpose.
         coor_y = coor_y + 1  # Not done inplace on purpose.
         if cv2 and order in (0, 1, 3):
             self._use_cv2 = True
@@ -402,11 +403,13 @@ class EquirecSampler:
         return out  # pyright: ignore[reportReturnType]
 
     def _pad(self, img: NDArray[DType]) -> NDArray[DType]:
-        """Adds 1 pixel of padding above/below image."""
+        """Adds 1 pixel of padding around entire image."""
         w = img.shape[1]
-        padded = np.pad(img, ((1, 1), (0, 0)), mode="empty")
-        padded[0, :] = np.roll(img[[0]], w // 2, 1)
-        padded[-1, :] = np.roll(img[[-1]], w // 2, 1)
+        padded = np.pad(img, ((1, 1), (1, 1)), mode="empty")
+        padded[0, 1:-1] = np.roll(img[[0]], w // 2, axis=1)
+        padded[-1, 1:-1] = np.roll(img[[-1]], w // 2, axis=1)
+        padded[:, 0] = padded[:, -2]
+        padded[:, -1] = padded[:, 1]
         return padded
 
     @classmethod
@@ -729,7 +732,7 @@ def cube_dice2list(cube_dice: NDArray[DType]) -> list[NDArray[DType]]:
         raise ValueError("Dice image height must be a multiple of 3.")
     w = cube_dice.shape[0] // 3
     if cube_dice.shape[1] != w * 4:
-        raise ValueError(f'Dice width must be 4 "faces" (4x{w}={4*w}) wide.')
+        raise ValueError(f'Dice width must be 4 "faces" (4x{w}={4 * w}) wide.')
     # Order: F R B L U D
     #        ┌────┐
     #        │ U  │
@@ -750,7 +753,7 @@ def cube_dice2h(cube_dice: NDArray[DType]) -> NDArray[DType]:
         raise ValueError("Dice image height must be a multiple of 3.")
     w = cube_dice.shape[0] // 3
     if cube_dice.shape[1] != w * 4:
-        raise ValueError(f'Dice width must be 4 "faces" (4x{w}={4*w}) wide.')
+        raise ValueError(f'Dice width must be 4 "faces" (4x{w}={4 * w}) wide.')
     cube_h = np.zeros((w, w * 6, cube_dice.shape[2]), dtype=cube_dice.dtype)
     # Order: F R B L U D
     #        ┌────┐

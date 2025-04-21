@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 
 import py360convert
+from py360convert import e2p
 
 AVG_DIFF_THRESH = 1.2
 
@@ -124,6 +125,16 @@ def test_e2c_list_mono(equirec_image_mono, list_image_mono):
     assert list_diff[3].mean() < AVG_DIFF_THRESH
     assert list_diff[4].mean() < AVG_DIFF_THRESH
     assert list_diff[5].mean() < AVG_DIFF_THRESH
+
+
+def test_e2p_wrap():
+    """Checks single column black pixels end wrapping.
+
+    https://github.com/sunset1995/py360convert/issues/46
+    """
+    pano = np.full((480, 480), 255, dtype=np.uint8)
+    pers_img = py360convert.e2p(pano, 90, -170, 0, (480, 480))
+    assert pers_img.min() == 255
 
 
 @pytest.mark.parametrize("dtype", [np.float16, np.float32, np.float64])
