@@ -5,8 +5,6 @@ from typing import Any, Literal, Optional, TypeVar, Union
 
 import numpy as np
 from numpy.typing import NDArray
-from scipy.ndimage import map_coordinates
-from scipy.spatial.transform import Rotation
 
 try:
     import cv2  # pyright: ignore[reportMissingImports]
@@ -340,6 +338,145 @@ def coor2uv(coorxy: NDArray[DType], h: int, w: int) -> NDArray[DType]:
     return np.concatenate([u, v], axis=-1, dtype=coorxy.dtype)
 
 
+def _map_coordinates_nearest(img, coords):
+    # coords: (2, H, W)
+    y, x = coords
+    y = np.round(y).astype(int)
+    x = np.round(x).astype(int)
+    y = np.clip(y, 0, img.shape[0] - 1)
+    x = np.clip(x, 0, img.shape[1] - 1)
+    return img[y, x]
+
+
+def _map_coordinates_linear(img, coords):
+    # Bilinear interpolation for 2D images
+    y, x = coords
+    x0 = np.floor(x).astype(int)
+    x1 = x0 + 1
+    y0 = np.floor(y).astype(int)
+    y1 = y0 + 1
+    x0 = np.clip(x0, 0, img.shape[1] - 1)
+    x1 = np.clip(x1, 0, img.shape[1] - 1)
+    y0 = np.clip(y0, 0, img.shape[0] - 1)
+    y1 = np.clip(y1, 0, img.shape[0] - 1)
+    Ia = img[y0, x0]
+    Ib = img[y1, x0]
+    Ic = img[y0, x1]
+    Id = img[y1, x1]
+    wa = (x1 - x) * (y1 - y)
+    wb = (x1 - x) * (y - y0)
+    wc = (x - x0) * (y1 - y)
+    wd = (x - x0) * (y - y0)
+    return wa * Ia + wb * Ib + wc * Ic + wd * Id
+
+
+def _cubic_kernel(x):
+    """Cubic convolution kernel (Catmull-Rom spline, a= -0.5)."""
+    absx = np.abs(x)
+    absx2 = absx ** 2
+    absx3 = absx ** 3
+    a = -0.5
+    k = (
+        ((a + 2) * absx3 - (a + 3) * absx2 + 1) * (absx <= 1)
+        + (a * absx3 - 5 * a * absx2 + 8 * a * absx - 4 * a) * ((absx > 1) & (absx < 2))
+    )
+    return k
+
+
+def _map_coordinates_cubic(img, coords):
+    # Bicubic interpolation for 2D images
+    y, x = coords
+    h, w = img.shape[:2]
+    x0 = np.floor(x).astype(int)
+    y0 = np.floor(y).astype(int)
+    # 4x4 neighborhood
+    result = np.zeros_like(x, dtype=img.dtype)
+    for m in range(-1, 3):
+        for n in range(-1, 3):
+            xm = np.clip(x0 + n, 0, w - 1)
+            ym = np.clip(y0 + m, 0, h - 1)
+            wx = _cubic_kernel(x - (x0 + n))
+            wy = _cubic_kernel(y - (y0 + m))
+            wxy = wx * wy
+            result += img[ym, xm] * wxy
+    return result
+
+
+def _cube_faces_nearest_interp(img, coords):
+    tp, y, x = coords
+    t = tp.astype(int)
+    y = np.round(y).astype(int)
+    x = np.round(x).astype(int)
+    t = np.clip(t, 0, img.shape[0] - 1)
+    y = np.clip(y, 0, img.shape[1] - 1)
+    x = np.clip(x, 0, img.shape[2] - 1)
+    return img[t, y, x]
+
+
+def _cube_faces_linear_interp(img, coord):
+    tp, y, x = coord
+    t = tp.astype(int)
+    t = np.clip(t, 0, img.shape[0] - 1)
+    y0 = np.floor(y).astype(int)
+    y1 = y0 + 1
+    x0 = np.floor(x).astype(int)
+    x1 = x0 + 1
+    y0 = np.clip(y0, 0, img.shape[1] - 1)
+    y1 = np.clip(y1, 0, img.shape[1] - 1)
+    x0 = np.clip(x0, 0, img.shape[2] - 1)
+    x1 = np.clip(x1, 0, img.shape[2] - 1)
+    Ia = img[t, y0, x0]
+    Ib = img[t, y1, x0]
+    Ic = img[t, y0, x1]
+    Id = img[t, y1, x1]
+    wa = (x1 - x) * (y1 - y)
+    wb = (x1 - x) * (y - y0)
+    wc = (x - x0) * (y1 - y)
+    wd = (x - x0) * (y - y0)
+    return wa * Ia + wb * Ib + wc * Ic + wd * Id
+
+
+def _cube_faces_cubic_interp(img, coords):
+    # Bicubic interpolation for 3D cube faces
+    tp, y, x = coords
+    t = tp.astype(int)
+    t = np.clip(t, 0, img.shape[0] - 1)
+    y0 = np.floor(y).astype(int)
+    x0 = np.floor(x).astype(int)
+    out = np.zeros_like(y, dtype=img.dtype)
+    for m in range(-1, 3):
+        ym = np.clip(y0 + m, 0, img.shape[1] - 1)
+        wy = _cubic_kernel(y - (y0 + m))
+        for n in range(-1, 3):
+            xm = np.clip(x0 + n, 0, img.shape[2] - 1)
+            wx = _cubic_kernel(x - (x0 + n))
+            wxy = wy * wx
+            out += img[t, ym, xm] * wxy
+    return out
+
+
+def map_coordinates(input: NDArray, coordinates: NDArray, order: int = 1) -> NDArray:
+    if order not in (0, 1, 3):
+        raise NotImplementedError("Only nearest, linear, and cubic interpolation are supported.")
+    
+    if len(coordinates) == 2:
+        if order == 0:
+            out = _map_coordinates_nearest(input, coordinates)
+        elif order == 1:
+            out = _map_coordinates_linear(input, coordinates)
+        elif order == 3:
+            out = _map_coordinates_cubic(input, coordinates)
+    elif len(coordinates) == 3:
+        if order == 0:
+            out = _cube_faces_nearest_interp(input, coordinates)
+        elif order == 1:
+            out = _cube_faces_linear_interp(input, coordinates)
+        elif order == 3:
+            out = _cube_faces_cubic_interp(input, coordinates)
+
+    return out
+
+
 class EquirecSampler:
     def __init__(
         self,
@@ -377,12 +514,8 @@ class EquirecSampler:
             self._order = order
 
     def __call__(self, img: NDArray[DType]) -> NDArray[DType]:
-        if img.dtype == np.float16:
-            source_dtype = np.float16
-        else:
-            source_dtype = None
-
-        if source_dtype:
+        source_dtype = img.dtype
+        if source_dtype == np.float16:
             img = img.astype(np.float32)  # pyright: ignore
 
         padded = self._pad(img)
@@ -397,7 +530,7 @@ class EquirecSampler:
                 order=self._order,
             )[..., 0]
 
-        if source_dtype:
+        if source_dtype == np.float16:
             out = out.astype(source_dtype)
 
         return out  # pyright: ignore[reportReturnType]
@@ -552,12 +685,8 @@ class CubeFaceSampler:
         if w != self._w:
             raise ValueError(f"Input width {w} doesn't match expected height {self._w}.")
 
-        if cube_faces.dtype == np.float16:
-            source_dtype = np.float16
-        else:
-            source_dtype = None
-
-        if source_dtype:
+        source_dtype = cube_faces.dtype
+        if source_dtype == np.float16:
             cube_faces = cube_faces.astype(np.float32)  # pyright: ignore
 
         padded = self._pad(cube_faces)
@@ -571,7 +700,7 @@ class CubeFaceSampler:
             # map_coordinates can handle uint8, float32, float64
             out = map_coordinates(padded, (self._tp, self._coor_y, self._coor_x), order=self._order)
 
-        if source_dtype:
+        if source_dtype == np.float16:
             out = out.astype(source_dtype)
 
         return out  # pyright: ignore[reportReturnType]
@@ -769,11 +898,36 @@ def cube_dice2h(cube_dice: NDArray[DType]) -> NDArray[DType]:
     return cube_h
 
 
+def rotation_matrix_fromRodrigues(rad: float, axis: Union[int, NDArray, Sequence]):
+    # Rodrigues' rotation formula https://en.wikipedia.org/wiki/Rodrigues%27_rotation_formula
+    normalized_axis = axis / np.linalg.norm(axis)
+    cos_half = np.cos(rad / 2.0)
+    axis_x, axis_y, axis_z = -normalized_axis * np.sin(rad / 2.0)
+    cos2 = cos_half * cos_half
+    x2 = axis_x * axis_x
+    y2 = axis_y * axis_y
+    z2 = axis_z * axis_z
+    xy = axis_x * axis_y
+    xz = axis_x * axis_z
+    yz = axis_y * axis_z
+    cos_z = cos_half * axis_z
+    cos_y = cos_half * axis_y
+    cos_x = cos_half * axis_x
+    R = np.array(
+        [
+            [cos2 + x2 - y2 - z2, 2 * (xy + cos_z), 2 * (xz - cos_y)],
+            [2 * (xy - cos_z), cos2 + y2 - x2 - z2, 2 * (yz + cos_x)],
+            [2 * (xz + cos_y), 2 * (yz - cos_x), cos2 + z2 - x2 - y2],
+        ]
+    )
+    return R
+
+
 def rotation_matrix(rad: float, ax: Union[int, NDArray, Sequence]):
     if isinstance(ax, int):
         ax = (np.arange(3) == ax).astype(float)
-    ax = np.array(ax)
+    ax = np.array(ax, dtype=float)
     if ax.shape != (3,):
         raise ValueError(f"ax must be shape (3,); got {ax.shape}")
-    R = Rotation.from_rotvec(rad * ax).as_matrix()
+    R = rotation_matrix_fromRodrigues(rad, ax)
     return R
