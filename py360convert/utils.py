@@ -548,9 +548,9 @@ class CubeFaceSampler:
         """
         h, w = cube_faces.shape[-2:]
         if h != self._h:
-            raise ValueError("Input height {h} doesn't match expected height {self._h}.")
+            raise ValueError(f"Input height {h} doesn't match expected height {self._h}.")
         if w != self._w:
-            raise ValueError("Input width {w} doesn't match expected height {self._w}.")
+            raise ValueError(f"Input width {w} doesn't match expected height {self._w}.")
 
         if cube_faces.dtype == np.float16:
             source_dtype = np.float16
