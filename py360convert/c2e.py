@@ -116,7 +116,7 @@ def c2e(
             squeeze = False
         cube_faces = cube_dice2list(cubemap)
     else:
-        raise ValueError('Unknown cube_format "{cube_format}".')
+        raise ValueError(f'Unknown cube_format "{cube_format}".')
 
     cube_faces = np.stack(cube_faces)
 
