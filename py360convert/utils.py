@@ -373,12 +373,11 @@ def _map_coordinates_linear(img, coords):
 def _cubic_kernel(x):
     """Cubic convolution kernel (Catmull-Rom spline, a= -0.5)."""
     absx = np.abs(x)
-    absx2 = absx ** 2
-    absx3 = absx ** 3
+    absx2 = absx**2
+    absx3 = absx**3
     a = -0.5
-    k = (
-        ((a + 2) * absx3 - (a + 3) * absx2 + 1) * (absx <= 1)
-        + (a * absx3 - 5 * a * absx2 + 8 * a * absx - 4 * a) * ((absx > 1) & (absx < 2))
+    k = ((a + 2) * absx3 - (a + 3) * absx2 + 1) * (absx <= 1) + (a * absx3 - 5 * a * absx2 + 8 * a * absx - 4 * a) * (
+        (absx > 1) & (absx < 2)
     )
     return k
 
@@ -455,10 +454,12 @@ def _cube_faces_cubic_interp(img, coords):
     return out
 
 
-def map_coordinates(input: NDArray, coordinates: NDArray, order: int = 1) -> NDArray:
+def map_coordinates(input: NDArray, coordinates: Union[NDArray, tuple[NDArray, ...]], order: int = 1) -> NDArray:
     if order not in (0, 1, 3):
         raise NotImplementedError("Only nearest, linear, and cubic interpolation are supported.")
-    
+
+    out: NDArray = np.array([])  # Initialize out variable
+
     if len(coordinates) == 2:
         if order == 0:
             out = _map_coordinates_nearest(input, coordinates)
@@ -898,9 +899,10 @@ def cube_dice2h(cube_dice: NDArray[DType]) -> NDArray[DType]:
     return cube_h
 
 
-def rotation_matrix_fromRodrigues(rad: float, axis: Union[int, NDArray, Sequence]):
+def rotation_matrix_from_rodrigues(rad: float, axis: Union[int, NDArray, Sequence[float]]) -> NDArray:
     # Rodrigues' rotation formula https://en.wikipedia.org/wiki/Rodrigues%27_rotation_formula
-    normalized_axis = axis / np.linalg.norm(axis)
+    axis_array = np.array(axis, dtype=float)
+    normalized_axis = axis_array / np.linalg.norm(axis_array)
     cos_half = np.cos(rad / 2.0)
     axis_x, axis_y, axis_z = -normalized_axis * np.sin(rad / 2.0)
     cos2 = cos_half * cos_half
@@ -929,5 +931,5 @@ def rotation_matrix(rad: float, ax: Union[int, NDArray, Sequence]):
     ax = np.array(ax, dtype=float)
     if ax.shape != (3,):
         raise ValueError(f"ax must be shape (3,); got {ax.shape}")
-    R = rotation_matrix_fromRodrigues(rad, ax)
+    R = rotation_matrix_from_rodrigues(rad, ax)
     return R

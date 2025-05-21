@@ -31,16 +31,13 @@ numpy = [
     {version = ">=1.20.0", python = "<3.13"},
     {version = ">=2.1.0", python = ">=3.13"},
 ]
-scipy = [
-    {version = ">=1.2.0", python = "<3.13"},
-    {version = ">=1.14.0", python = ">=3.13"},
-]
 pillow = ">=6.0.0"
 
 [tool.poetry.group.dev.dependencies]
 pre_commit = ">=2.16.0"
 pytest = ">=7.1.2"
 pytest-mock = ">=3.7.0"
+scipy = ">=1.7.0"
 
 [tool.pyright]
 venvPath = "."
